@@ -30,3 +30,10 @@
 *.exe
 *.out
 *.app
+
+# Build Output
+build/
+generated/
+notes/
+examples/*.sm166
+.vscode

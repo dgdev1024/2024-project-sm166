@@ -74,6 +74,12 @@ namespace smboy
       case 0x05:  return m_emulator.get_timer().read_reg_tima();
       case 0x06:  return m_emulator.get_timer().read_reg_tma();
       case 0x07:  return m_emulator.get_timer().read_reg_tac();
+      case 0x08:  return m_emulator.get_realtime().read_reg_rts();
+      case 0x09:  return m_emulator.get_realtime().read_reg_rtm();
+      case 0x0A:  return m_emulator.get_realtime().read_reg_rth();
+      case 0x0B:  return m_emulator.get_realtime().read_reg_rtdl();
+      case 0x0C:  return m_emulator.get_realtime().read_reg_rtdh();
+      case 0x0D:  return m_emulator.get_realtime().read_reg_rtc();
       case 0x0F:  return m_emulator.get_processor().get_interrupt_request();
       case 0xFF:  return m_emulator.get_processor().get_interrupt_enable();
       default: return 0xFF;
@@ -87,6 +93,7 @@ namespace smboy
       case 0x05:  m_emulator.get_timer().write_reg_tima(value); break;
       case 0x06:  m_emulator.get_timer().write_reg_tma(value); break;
       case 0x07:  m_emulator.get_timer().write_reg_tac(value); break;
+      case 0x0D:  m_emulator.get_realtime().write_reg_rtc(value); break;
       case 0x0F:  m_emulator.get_processor().set_interrupt_request(value); break;
       case 0xFF:  m_emulator.get_processor().set_interrupt_enable(value); break;
       default: break;

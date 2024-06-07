@@ -26,6 +26,7 @@ namespace smboy
     void tick ();
 
   public:
+    inline std::uint16_t get_divider () const { return m_divider; }
     inline bool is_enabled () const { return sm_getbit(m_control, 2); }
     inline timer_speed get_speed () const { return (timer_speed) (m_control & 0b11); }
 
@@ -41,7 +42,7 @@ namespace smboy
 
   private:
     emulator& m_emulator;
-    std::uint16_t m_divider = 0x000;
+    std::uint16_t m_divider = 0x0000;
     std::uint8_t  m_counter = 0x00;
     std::uint8_t  m_modulo  = 0x00;
     std::uint8_t  m_control = 0x00;

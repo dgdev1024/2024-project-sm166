@@ -6,6 +6,8 @@
 #include <string>
 #include <unordered_map>
 #include <filesystem>
+#include <chrono>
+#include <ctime>
 #include <sm/common.hpp>
 
 namespace fs = std::filesystem;
@@ -33,7 +35,8 @@ namespace smboy
     int_lcd,
     int_timer,
     int_serial,
-    int_joypad
+    int_joypad,
+    int_realtime
   };
 
 }

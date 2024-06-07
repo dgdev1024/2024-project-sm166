@@ -6,6 +6,7 @@
 #include <smboy/memory.hpp>
 #include <smboy/program.hpp>
 #include <smboy/timer.hpp>
+#include <smboy/realtime.hpp>
 
 namespace smboy
 {
@@ -31,11 +32,15 @@ namespace smboy
     inline timer& get_timer () { return m_timer; }
     inline const timer& get_timer () const { return m_timer; }
 
+    inline realtime& get_realtime () { return m_realtime; }
+    inline const realtime& get_realtime () const { return m_realtime; }
+
   private:
     sm::processor m_processor;
     memory        m_memory;
     program       m_program;
     timer         m_timer;
+    realtime      m_realtime;
 
   };
 

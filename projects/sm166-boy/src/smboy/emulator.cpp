@@ -7,7 +7,8 @@ namespace smboy
 
   emulator::emulator (const fs::path& program_path) :
     m_memory { *this },
-    m_timer { *this }
+    m_timer { *this },
+    m_realtime { *this }
   {
     m_program.load_file(program_path);
     m_processor.set_cycle_function(std::bind(
@@ -18,6 +19,8 @@ namespace smboy
 
   bool emulator::start ()
   {
+    m_realtime.initialize();
+    
     try {
       while (m_processor.check_flag(sm::processor_flag_type::stop) == false) {
         m_processor.step(m_memory);
@@ -34,6 +37,7 @@ namespace smboy
     (void) cycle_count;
 
     m_timer.tick();
+    m_realtime.tick();
   }
 
 }

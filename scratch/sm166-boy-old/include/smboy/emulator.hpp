@@ -16,6 +16,7 @@ namespace smboy
   {
   public:
     emulator (const fs::path& program_path);
+    ~emulator ();
 
   public:
     bool start ();

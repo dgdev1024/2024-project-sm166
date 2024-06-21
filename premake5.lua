@@ -39,7 +39,7 @@ workspace "project-sm166"
 project "sm166"
 
   -- Project Configuration
-  kind "SharedLib"
+  kind "StaticLib"
   location "./generated/sm166"
   targetdir "./build/bin/sm166/%{cfg.buildcfg}"
   objdir "./build/obj/sm166/%{cfg.buildcfg}"
@@ -52,35 +52,6 @@ project "sm166"
   -- Source Files
   files {
     "./projects/sm166/src/**.cpp"
-  }
-
--- SM Boy Emulator Backend
-project "sm166-boy"
-
-  -- Project Configuration
-  kind "ConsoleApp"
-  location "./generated/sm166-boy"
-  targetdir "./build/bin/sm166-boy/%{cfg.buildcfg}"
-  objdir "./build/obj/sm166-boy/%{cfg.buildcfg}"
-
-  -- Include Directories
-  includedirs {
-    "./projects/sm166/include",
-    "./projects/sm166-boy/include"
-  }
-
-  -- Source Files
-  files {
-    "./projects/sm166-boy/src/**.cpp"
-  }
-
-  -- Link Libraries
-  libdirs {
-    "./build/bin/sm166/%{cfg.buildcfg}"
-  }
-
-  links {
-    "sm166"
   }
 
 -- SM166 Assembler

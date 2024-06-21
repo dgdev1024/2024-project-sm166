@@ -16,6 +16,11 @@ namespace smboy
   {
 
   }
+  
+  renderer::~renderer ()
+  {
+    std::cout << "Renderer Destructor\n";
+  }
 
   /** Initialization and Ticking ******************************************************************/
 
@@ -457,6 +462,7 @@ namespace smboy
 
   void renderer::push_color_value (std::uint32_t color_value)
   {
+    // (void) color_value;
     m_fetcher.fifo.push(color_value);
   }
 
@@ -622,7 +628,7 @@ namespace smboy
       }
 
       // Add the pixel to the FIFO.
-      m_fetcher.fifo.push(color_value);
+      push_color_value(color_value);
       m_fetcher.fifo_x++;
 
     }

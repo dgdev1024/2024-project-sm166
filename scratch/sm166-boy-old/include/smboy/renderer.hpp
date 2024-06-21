@@ -231,6 +231,7 @@ namespace smboy
   public:
   
     renderer (emulator& _emulator);
+    ~renderer ();
 
   public: /** Public Methods **********************************************************************/
 

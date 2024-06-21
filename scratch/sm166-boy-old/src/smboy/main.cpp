@@ -14,11 +14,9 @@ int main (int argc, char** argv)
     std::cerr << "Missing program file argument (--program-file, -p)." << std::endl;
     return 1;
   }
-
+  
   smboy::emulator emulator { program_file };
-  if (emulator.start() == false) {
-    return 1;
-  }
-
+  if (emulator.start() == false) { return 1; }
+  
   return 0;
 }

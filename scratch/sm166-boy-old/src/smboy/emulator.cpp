@@ -16,6 +16,11 @@ namespace smboy
       &emulator::on_processor_cycle, this, std::placeholders::_1
     ));
   }
+  
+  emulator::~emulator ()
+  {
+    std::cout << "Emulator Destructor\n";
+  }
 
   bool emulator::start ()
   {

@@ -5,6 +5,12 @@
 namespace smasm
 {
 
+  environment::environment (environment* parent) :
+    m_parent { parent }
+  {
+
+  }
+
   bool environment::declare_variable (const std::string& key, const value::ptr& value, 
     bool constant)
   {
@@ -40,6 +46,11 @@ namespace smasm
 
     auto it = m_variables.find(key);
     if (it == m_variables.end()) {
+      if (m_parent != nullptr)
+      {
+        return m_parent->resolve_variable(key);
+      }
+
       std::cerr << "[environment] Could not resolve variable name '" << key << "'." << std::endl;
       return nullptr;
     }

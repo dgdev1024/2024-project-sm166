@@ -7,7 +7,7 @@ namespace smasm
 
   #define has_one_arg(opc) \
     std::uint16_t opcode = opc; \
-    auto arg_one = evaluate(stmt->get_first()); \
+    auto arg_one = evaluate(stmt->get_first(), env); \
     if (arg_one == nullptr) { \
       std::cerr << "[instruction] Missing first argument to instruction '" \
                 << stmt->get_mnemonic() << "'." << std::endl; \
@@ -16,14 +16,14 @@ namespace smasm
 
   #define has_two_args(opc) \
     has_one_arg(opc) \
-    auto arg_two = evaluate(stmt->get_second()); \
+    auto arg_two = evaluate(stmt->get_second(), env); \
     if (arg_two == nullptr) { \
       std::cerr << "[instruction] Missing second argument to instruction '" \
                 << stmt->get_mnemonic() << "'." << std::endl; \
       return false; \
     }
 
-  bool interpreter::evaluate_inst_ld (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_ld (const instruction_statement* stmt, environment& env)
   {
     has_two_args(0x1000);
 
@@ -89,7 +89,7 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_lh (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_lh (const instruction_statement* stmt, environment& env)
   {
     if (stmt->get_mnemonic() == "lhb") {
       has_one_arg(0x1070);
@@ -116,7 +116,7 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_st (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_st (const instruction_statement* stmt, environment& env)
   {
     has_two_args(0x1100);
 
@@ -169,7 +169,7 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_sh (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_sh (const instruction_statement* stmt, environment& env)
   {
     switch (keyword::lookup(stmt->get_mnemonic()).param_one)
     {
@@ -224,7 +224,7 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_mv (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_mv (const instruction_statement* stmt, environment& env)
   {
     has_two_args(0x1200);
     auto dest_reg = value_cast<cpu_register_value>(arg_one);
@@ -266,7 +266,7 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_ms (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_ms (const instruction_statement* stmt, environment& env)
   {
     has_one_arg(0x1500);
 
@@ -303,7 +303,7 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_push (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_push (const instruction_statement* stmt, environment& env)
   {
     has_one_arg(0x1600);
     auto src_register = value_cast<cpu_register_value>(arg_one);
@@ -324,7 +324,7 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_pop (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_pop (const instruction_statement* stmt, environment& env)
   {
     has_one_arg(0x1620);
     auto src_register = value_cast<cpu_register_value>(arg_one);
@@ -345,7 +345,7 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_jmp (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_jmp (const instruction_statement* stmt, environment& env)
   {
     has_two_args(0x2000);
 
@@ -387,7 +387,7 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_call (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_call (const instruction_statement* stmt, environment& env)
   {
     has_two_args(0x2200);
 
@@ -412,7 +412,7 @@ namespace smasm
            m_assembly.write_long(address->get_address());
   }
 
-  bool interpreter::evaluate_inst_rst (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_rst (const instruction_statement* stmt, environment& env)
   {
     has_one_arg(0x2210);
     
@@ -425,7 +425,7 @@ namespace smasm
     return m_assembly.write_word(opcode) && m_assembly.write_byte(dest_val->get_integer() & 0b111);
   }
 
-  bool interpreter::evaluate_inst_ret (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_ret (const instruction_statement* stmt, environment& env)
   {
     has_one_arg(0x2300);
 
@@ -442,7 +442,7 @@ namespace smasm
     return m_assembly.write_word(opcode);
   }
 
-  bool interpreter::evaluate_inst_inc (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_inc (const instruction_statement* stmt, environment& env)
   {
     has_one_arg(0x3000);
 
@@ -482,7 +482,7 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_dec (const instruction_statement* stmt)
+  bool interpreter::evaluate_inst_dec (const instruction_statement* stmt, environment& env)
   {
     has_one_arg(0x3100);
 
@@ -522,7 +522,8 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_gen_a (const instruction_statement* stmt, std::uint16_t _opcode)
+  bool interpreter::evaluate_inst_gen_a (const instruction_statement* stmt, std::uint16_t _opcode,
+    environment& env)
   {
     has_one_arg(_opcode);
 
@@ -568,7 +569,8 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_gen_b (const instruction_statement* stmt, std::uint16_t _opcode)
+  bool interpreter::evaluate_inst_gen_b (const instruction_statement* stmt, std::uint16_t _opcode,
+    environment& env)
   {
     has_one_arg(_opcode);
 
@@ -610,7 +612,8 @@ namespace smasm
     }
   }
 
-  bool interpreter::evaluate_inst_gen_c (const instruction_statement* stmt, std::uint16_t _opcode)
+  bool interpreter::evaluate_inst_gen_c (const instruction_statement* stmt, std::uint16_t _opcode,
+    environment& env)
   {
     has_two_args(_opcode);
 

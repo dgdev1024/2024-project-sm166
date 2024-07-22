@@ -14,7 +14,8 @@ namespace smasm
     cpu_condition,
     address,
     number,
-    string
+    string,
+    function
   };
 
   /** Runtime Value Base Class ********************************************************************/
@@ -169,6 +170,32 @@ namespace smasm
 
   };
 
+  /* Function Values ******************************************************************************/
 
+  class function_value : public value
+  {
+  public:
+    inline function_value (
+      const std::string& name,
+      const std::vector<std::string>& parameter_list,
+      const statement::body& body
+    ) :
+      value { value_type::function },
+      m_name { name },
+      m_parameter_list { parameter_list },
+      m_body { body }
+    {}
+
+  public:
+    inline const std::string& get_name () const { return m_name; }
+    inline const std::vector<std::string>& get_parameter_list () const { return m_parameter_list; }
+    inline const statement::body& get_body () const { return m_body; }
+
+  private:
+    std::string m_name = "";
+    std::vector<std::string> m_parameter_list;
+    statement::body m_body;
+
+  };
 
 }

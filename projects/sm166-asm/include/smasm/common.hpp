@@ -14,3 +14,10 @@
 namespace fs = std::filesystem;
 
 #define indent(c) std::string(c, ' ')
+
+namespace smasm
+{
+
+  using string_list = std::vector<std::string>;
+
+}

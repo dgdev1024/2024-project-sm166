@@ -27,7 +27,8 @@ namespace smasm
     lt_long,
     lt_include,
     lt_let,
-    lt_const
+    lt_const,
+    lt_function
   };
 
   enum directive_type

@@ -119,6 +119,7 @@ namespace smasm
         case language_type::lt_include: return parse_include_statement(_lexer);
         case language_type::lt_let:     return parse_variable_declaration_statement(_lexer, false);
         case language_type::lt_const:   return parse_variable_declaration_statement(_lexer, true);
+        case language_type::lt_function:return parse_function_expression(_lexer);
         default:
           std::cerr <<  "[parser] Un-implemented language statement: '" << lang_token.contents << "'."
                     <<  std::endl;
@@ -264,7 +265,97 @@ namespace smasm
 
   expression::ptr parser::parse_expression (lexer& _lexer)
   {
+    const auto& token_kw = _lexer.token_at().get_keyword();
+    if (token_kw.type == keyword_type::language)
+    {
+      auto lang_token = _lexer.discard_token();
+      auto lang_keyword = lang_token.get_keyword();
+
+      switch (lang_keyword.param_one)
+      {
+        case language_type::lt_function:  return parse_function_expression(_lexer);
+        default:
+          std::cerr <<  "[parser] Un-implemented language expression: '" 
+                    << lang_token.contents << "'."
+                    <<  std::endl;
+          return nullptr;
+      }
+    }
+
     return parse_additive_expression(_lexer);
+  }
+
+  expression::ptr parser::parse_function_expression (lexer& _lexer)
+  {
+    auto name_expr = parse_primary_expression(_lexer);
+    if (name_expr == nullptr) {
+      return nullptr;
+    } else if (name_expr->get_syntax_type() != syntax_type::identifier) {
+      std::cerr << "[parser] Missing function name from 'function' expression." << std::endl;
+      return nullptr;
+    }
+
+    auto name = expression_cast<identifier>(name_expr)->get_symbol();
+    if (_lexer.discard_token().type != token_type::open_paren) {
+      std::cerr << "[parser] Expected '(' after name in declaration of function '"
+                << name << "'." << std::endl;
+      return nullptr;
+    }
+
+    std::vector<std::string> parameter_list;
+    while (true)
+    {
+      if (_lexer.token_at().type == token_type::close_paren) {
+        _lexer.discard_token();
+        break;
+      } else if (parameter_list.empty() == false) {
+        if (_lexer.token_at().type == token_type::comma) {
+          _lexer.discard_token();
+        } else {
+          std::cerr << "[parser] Expected ',' before parameter #" << (parameter_list.size() + 1)
+                    << " in declaration of function '" << name << "'." << std::endl;
+          return nullptr;
+        }
+      }
+
+      auto param_expr = parse_primary_expression(_lexer);
+      if (param_expr == nullptr) {
+        std::cerr << "[parser] In parameter #" << (parameter_list.size() + 1)
+                  << " in declaration of function '" << name << "'." << std::endl;
+        return nullptr;
+      } else if (param_expr->get_syntax_type() != syntax_type::identifier) {
+        std::cerr << "[parser] Expected identifier for parameter #" << (parameter_list.size() + 1)
+                  << " in declaration of function '" << name << "'." << std::endl;
+        return nullptr;
+      }
+
+      parameter_list.push_back(expression_cast<identifier>(param_expr)->get_symbol());
+    }
+
+    if (_lexer.discard_token().type != token_type::open_brace) {
+      std::cerr << "[parser] Expected '{' after parameter list in declaration of function '"
+                << name << "'." << std::endl;
+      return nullptr;
+    }
+
+    statement::body body;
+    while (true)
+    {
+      if (_lexer.token_at().type == token_type::close_brace) {
+        _lexer.discard_token();
+        break;
+      }
+
+      auto statement = parse_directive(_lexer);
+      if (statement == nullptr) {
+        std::cerr << "[parser] In body of function '" << name << "'." << std::endl;
+        return nullptr;
+      }
+
+      body.push_back(statement);
+    }
+
+    return expression::make<function_expression>(name, parameter_list, body);
   }
 
   expression::ptr parser::parse_additive_expression (lexer& _lexer)
@@ -288,7 +379,7 @@ namespace smasm
 
   expression::ptr parser::parse_multiplicitive_expression (lexer& _lexer)
   {
-    expression::ptr left = parse_primary_expression(_lexer);
+    expression::ptr left = parse_call_expression(_lexer);
     if (left == nullptr) { return nullptr; }
 
     while (
@@ -297,13 +388,65 @@ namespace smasm
       _lexer.token_at().type == token_type::percent
     ) {
       std::string oper = _lexer.discard_token().contents;
-      expression::ptr right = parse_primary_expression(_lexer);
+      expression::ptr right = parse_call_expression(_lexer);
       if (right == nullptr) { return nullptr; }
 
       left = expression::make<binary_expression>(left, right, oper);
     }
 
     return left;
+  }
+
+  expression::ptr parser::parse_call_expression (lexer& _lexer)
+  {
+    expression::ptr callee = parse_primary_expression(_lexer);
+    if (callee == nullptr) { return nullptr; }
+
+    if (
+      callee->get_syntax_type() == syntax_type::identifier &&
+      _lexer.token_at().type == token_type::open_paren
+    )
+    {
+      _lexer.discard_token();
+
+      auto callee_expr = expression_cast<identifier>(callee);
+      expression::array argument_list;
+      while (true)
+      {
+        if (_lexer.token_at().type == token_type::close_paren)
+        {
+          _lexer.discard_token();
+          break;
+        }
+        else if (argument_list.empty() == false)
+        {
+          if (_lexer.token_at().type != token_type::comma)
+          {
+            std::cerr <<  "[parser] Expected ')' after argument list in call to function '"
+                      <<  callee_expr->get_symbol() << "'." << std::endl;
+            return nullptr;
+          }
+          _lexer.discard_token();
+        }
+
+        expression::ptr expr = parse_expression(_lexer);
+        if (expr == nullptr)
+        {
+          std::cerr <<  "[parser] In argument #" << (argument_list.size() + 1) 
+                    << " of call to function '" << callee_expr->get_symbol() << "'."
+                    <<  std::endl;
+          return nullptr;
+        }
+
+        argument_list.push_back(expr);
+      }
+
+      return expression::make<call_expression>(callee, argument_list);
+    }
+    else
+    {
+      return callee;
+    }
   }
 
   /** Primary Expression Parsing Methods **********************************************************/

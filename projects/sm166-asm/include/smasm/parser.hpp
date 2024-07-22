@@ -28,8 +28,10 @@ namespace smasm
   
   private:
     expression::ptr parse_expression (lexer& _lexer);
+    expression::ptr parse_function_expression (lexer& _lexer);
     expression::ptr parse_multiplicitive_expression (lexer& _lexer);
     expression::ptr parse_additive_expression (lexer& _lexer);
+    expression::ptr parse_call_expression (lexer& _lexer);
   
   private:
     expression::ptr parse_primary_expression (lexer& _lexer);

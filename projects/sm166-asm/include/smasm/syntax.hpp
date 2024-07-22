@@ -23,7 +23,9 @@ namespace smasm
     instruction_statement,
 
     address_literal,
+    function_expression,
     binary_expression,
+    call_expression,
 
     identifier,
     numeric_literal,
@@ -425,6 +427,55 @@ namespace smasm
 
   };
 
+  class function_expression : public expression
+  {
+  public:
+    inline function_expression (
+      const std::string& name,
+      const std::vector<std::string>& parameter_list,
+      const statement::body& body
+    ) :
+      expression { syntax_type::function_expression },
+      m_name { name },
+      m_parameter_list { parameter_list },
+      m_body { body }
+    {}
+
+  public:
+    inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+    {
+      os << indent(i) << "function '" << m_name << "' {\n";
+      {
+        if (m_parameter_list.empty() == false) {
+          os << indent(i + 2) << "parameters {\n";
+          for (const auto& param : m_parameter_list) {
+            os << indent(i + 4) << param << "\n";
+          }
+          os << indent(i + 2) << "}\n";
+        }
+        if (m_body.empty() == false) {
+          os << indent(i + 2) << "body {\n";
+          for (const auto& statement : m_body) {
+            statement->dump(os, i + 4);
+          }
+          os << indent(i + 2) << "}\n";
+        }
+      }
+      os << indent(i) << "}\n";
+    }
+
+  public:
+    inline const std::string& get_name () const { return m_name; }
+    inline const std::vector<std::string>& get_parameter_list () const { return m_parameter_list; }
+    inline const statement::body& get_body () const { return m_body; }
+
+  private:
+    std::string m_name = "";
+    std::vector<std::string> m_parameter_list;
+    statement::body m_body;
+
+  };
+
   class binary_expression : public expression
   {
   public:
@@ -468,6 +519,49 @@ namespace smasm
     expression::ptr m_left  = nullptr;
     expression::ptr m_right = nullptr;
     std::string     m_oper  = "";
+
+  };
+
+  class call_expression : public expression
+  {
+  public:
+    inline call_expression (
+      const expression::ptr& callee_expr,
+      const expression::array& argument_list
+    ) :
+      expression { syntax_type::call_expression },
+      m_callee_expr { callee_expr },
+      m_argument_list { argument_list }
+    {}
+
+  public:
+    inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+    {
+      os << indent(i) << "call expression {\n";
+      {
+        if (m_callee_expr != nullptr) {
+          os << indent(i + 2) << "callee\n";
+          m_callee_expr->dump(os, i + 4);
+        }
+
+        if (m_argument_list.empty() == false) {
+          os << indent(i + 2) << "arguments {\n";
+          for (const auto& arg : m_argument_list) {
+            arg->dump(os, i + 4);
+          }
+          os << indent(i + 2) << "}\n";
+        }
+      }
+      os << indent(i) << "}\n";
+    }
+
+  public:
+    inline const expression::ptr& get_callee_expr () const { return m_callee_expr; }
+    inline const expression::array& get_argument_list () const { return m_argument_list; }
+
+  private:
+    expression::ptr m_callee_expr = nullptr;
+    expression::array m_argument_list;
 
   };
 

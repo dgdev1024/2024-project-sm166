@@ -14,6 +14,9 @@ namespace smasm
     { "word", { keyword_type::language, language_type::lt_word } },
     { "long", { keyword_type::language, language_type::lt_long } },
     { "include", { keyword_type::language, language_type::lt_include } },
+    { "var", { keyword_type::language, language_type::lt_let } },
+    { "let", { keyword_type::language, language_type::lt_let } },
+    { "const", { keyword_type::language, language_type::lt_const } },
 
     // Directives
     { "size", { keyword_type::directive, directive_type::dt_size } },

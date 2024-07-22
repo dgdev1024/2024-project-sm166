@@ -20,6 +20,7 @@ namespace smasm
 
   private:
     statement::ptr  parse_statement (lexer& _lexer);
+    statement::ptr  parse_variable_declaration_statement (lexer& _lexer, bool constant);
     statement::ptr  parse_label_statement (lexer& _lexer);
     statement::ptr  parse_data_statement (lexer& _lexer, int size);
     statement::ptr  parse_include_statement (lexer& _lexer);

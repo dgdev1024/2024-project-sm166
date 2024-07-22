@@ -117,6 +117,8 @@ namespace smasm
         case language_type::lt_word:    return parse_data_statement(_lexer, 2);
         case language_type::lt_long:    return parse_data_statement(_lexer, 4);
         case language_type::lt_include: return parse_include_statement(_lexer);
+        case language_type::lt_let:     return parse_variable_declaration_statement(_lexer, false);
+        case language_type::lt_const:   return parse_variable_declaration_statement(_lexer, true);
         default:
           std::cerr <<  "[parser] Un-implemented language statement: '" << lang_token.contents << "'."
                     <<  std::endl;
@@ -127,6 +129,42 @@ namespace smasm
     }
 
     return parse_expression(_lexer);
+  }
+
+  statement::ptr parser::parse_variable_declaration_statement (lexer& _lexer, bool constant)
+  {
+    auto key_expr = parse_primary_expression(_lexer);
+    if (key_expr == nullptr) {
+      return nullptr;
+    } else if (key_expr->get_syntax_type() != syntax_type::identifier) {
+      std::cerr <<  "[parser] Expected key identifier in variable declaration."
+                <<  std::endl;
+      return nullptr;
+    } 
+    
+    auto key_identifier = expression_cast<identifier>(key_expr);
+    if (key_identifier->get_keyword().type != keyword_type::none)
+    {
+      std::cerr <<  "[parser] Variable key identifier '" << key_identifier->get_symbol() 
+                <<  "' is a reserved keyword."
+                <<  std::endl;
+      return nullptr;
+    }
+
+    if (_lexer.discard_token().type != token_type::equals) 
+    {
+      std::cerr <<  "[parser] Expected '=' after key in declaration of variable '"
+                <<  key_identifier->get_symbol() << "'."
+                <<  std::endl;
+      return nullptr;
+    }
+
+    auto value_expr = parse_expression(_lexer);
+    if (value_expr == nullptr) {
+      return nullptr;
+    }
+
+    return statement::make<variable_declaration_statement>(key_expr, value_expr, constant);
   }
 
   statement::ptr parser::parse_label_statement (lexer& _lexer)
@@ -152,7 +190,7 @@ namespace smasm
     if (_lexer.discard_token().type != token_type::colon) 
     {
       std::cerr <<  "[parser] Expected ':' after declaration of label '"
-                << label_identifier->get_symbol() << "'."
+                <<  label_identifier->get_symbol() << "'."
                 <<  std::endl;
       return nullptr;
     }

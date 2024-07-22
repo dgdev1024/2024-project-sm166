@@ -35,6 +35,10 @@ namespace smasm
         return evaluate_section_directive(
           statement_cast<section_directive>(stmt).get()
         );
+      case syntax_type::variable_declaration_statement:
+        return evaluate_variable_declaration_statement(
+          statement_cast<variable_declaration_statement>(stmt).get()
+        );
       case syntax_type::label_statement:
         return evaluate_label_statement(
           statement_cast<label_statement>(stmt).get()
@@ -115,6 +119,34 @@ namespace smasm
       if (m_assembly.set_rom_cursor(casted_value->get_integer()) == false) {
         return nullptr;
       }
+    }
+
+    return value::make<void_value>();
+  }
+
+  value::ptr interpreter::evaluate_variable_declaration_statement 
+    (const variable_declaration_statement* stmt)
+  {
+    auto key_expr = expression_cast<identifier>(stmt->get_key_expr());
+    auto value = evaluate(stmt->get_value_expr());
+    if (value == nullptr) {
+      std::cerr <<  "[interpreter] Could not evaluate value in declaration of variable '"
+                <<  key_expr->get_symbol() << "." << std::endl;
+      return nullptr;
+    } else if (value->get_value_type() == value_type::none) {
+      std::cerr <<  "[interpreter] Declaration of variable '" << key_expr->get_symbol()
+                <<  "' has evaluated to no value." << std::endl;
+      return nullptr;
+    }
+
+    if (
+      m_environment.declare_variable(
+        key_expr->get_symbol(),
+        value,
+        stmt->is_constant()
+      ) == false
+    ) {
+      return nullptr;
     }
 
     return value::make<void_value>();

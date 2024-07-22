@@ -16,6 +16,7 @@ namespace smasm
     size_directive,
     section_directive,
 
+    variable_declaration_statement,
     label_statement,
     data_statement,
     include_statement,
@@ -204,6 +205,47 @@ namespace smasm
   };
 
   /** Statements **********************************************************************************/
+
+  class variable_declaration_statement : public statement
+  {
+  public:
+    inline variable_declaration_statement (
+      const expression::ptr& key_expr,
+      const expression::ptr& value_expr,
+      bool constant = false
+    ) :
+      statement { syntax_type::variable_declaration_statement },
+      m_key_expr { key_expr },
+      m_value_expr { value_expr },
+      m_constant { constant }
+    {}
+
+  public:
+    inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+    {
+      os << indent(i) << (m_constant == true ? "constant" : "variable") << " {\n";
+      if (m_key_expr != nullptr) {
+        os << indent(i + 2) << "key\n";
+        m_key_expr->dump(os, i + 4);
+      }
+      if (m_value_expr != nullptr) {
+        os << indent(i + 2) << "value\n";
+        m_value_expr->dump(os, i + 4);
+      }
+      os << indent(i) << "}\n";
+    }
+
+  public:
+    inline const expression::ptr& get_key_expr () const { return m_key_expr; }
+    inline const expression::ptr& get_value_expr () const { return m_value_expr; }
+    inline bool is_constant () const { return m_constant; }
+
+  private:
+    expression::ptr m_key_expr = nullptr;
+    expression::ptr m_value_expr = nullptr;
+    bool m_constant = false;
+
+  };
 
   class label_statement : public statement
   {

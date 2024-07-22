@@ -28,6 +28,7 @@ namespace smasm
     value::ptr evaluate_program (const program* prgm);
     value::ptr evaluate_size_directive (const size_directive* dir);
     value::ptr evaluate_section_directive (const section_directive* dir);
+    value::ptr evaluate_variable_declaration_statement (const variable_declaration_statement* stmt);
     value::ptr evaluate_label_statement (const label_statement* stmt);
     value::ptr evaluate_data_statement (const data_statement* stmt);
     value::ptr evaluate_include_statement (const include_statement* stmt);

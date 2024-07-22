@@ -36,14 +36,6 @@ namespace sm
   public:
 
     /**
-     * @brief Pushes a byte of data into the memory stack, adjusting the stack pointer as proper.
-     * 
-     * @param stack_pointer A handle to the CPU's stack pointer register.
-     * @param value         The value of the byte to be pushed into the stack.
-     */
-    virtual void push_byte (std::uint16_t& stack_pointer, std::uint8_t value) = 0;
-
-    /**
      * @brief Pops a byte of data from the memory stack, adjusting the stack pointer as proper.
      * 
      * @param stack_pointer A handle to the CPU's stack pointer register.
@@ -52,6 +44,14 @@ namespace sm
      *          A user-defined error byte (eg. `0x00` or `0xFF`) otherwise. 
      */
     virtual std::uint8_t pop_byte (std::uint16_t& stack_pointer) const = 0;
+
+    /**
+     * @brief Pushes a byte of data into the memory stack, adjusting the stack pointer as proper.
+     * 
+     * @param stack_pointer A handle to the CPU's stack pointer register.
+     * @param value         The value of the byte to be pushed into the stack.
+     */
+    virtual void push_byte (std::uint16_t& stack_pointer, std::uint8_t value) = 0;
 
   public:
 

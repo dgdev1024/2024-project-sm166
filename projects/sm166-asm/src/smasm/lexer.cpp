@@ -7,17 +7,27 @@ namespace smasm
 
   bool lexer::lex_file (const fs::path& path)
   {
+    fs::path absolute = fs::absolute(path).lexically_normal();
 
-    if (fs::exists(path) == false) {
+    if (path.extension() != ".asm") {
       std::cerr <<  "[lexer] "
-                <<  "File '" << path << "' not found." << std::endl;
+                <<  "File '" << absolute << "' is not an '.asm' file." << std::endl;
       return false;
     }
 
-    fs::path absolute = fs::absolute(path).lexically_normal();
+    if (fs::exists(absolute) == false) {
+      std::cerr <<  "[lexer] "
+                <<  "File '" << absolute << "' not found." << std::endl;
+      return false;
+    }
+
     if (
       std::find(m_paths.begin(), m_paths.end(), absolute) != m_paths.end()
     ) {
+    #if defined(SM166_DEBUG)
+      std::cout <<  "[lexer] "
+                <<  "File '" << absolute << "' was already included." << std::endl;
+    #endif
       return true;
     } else {
       m_paths.push_back(absolute);
@@ -33,6 +43,11 @@ namespace smasm
     m_current_path = absolute;
     m_current_line = 1;
     m_write_ptr = 0;
+
+    if (m_parent_path.empty() == true)
+    {
+      m_parent_path = m_current_path.parent_path();
+    }
 
     while (true) {
       auto result = collect_token();

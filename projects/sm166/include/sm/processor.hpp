@@ -77,6 +77,9 @@ namespace sm
   {
 
   public:
+    using ptr = std::unique_ptr<processor>;
+
+  public:
 
     /**
      * @brief Initializes the SM166 CPU, setting its internal registers to their default values.
@@ -107,7 +110,7 @@ namespace sm
      * @param mem A handle to the memory management unit (MMU) which the CPU will use to execute the
      *            next instruction. 
      */
-    void step (memory& mem);
+    bool step (memory& mem);
 
   public:
 

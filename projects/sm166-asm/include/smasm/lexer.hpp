@@ -32,6 +32,11 @@ namespace smasm
       return m_current_path;
     }
 
+    inline const fs::path& get_parent_path () const
+    {
+      return m_parent_path;
+    }
+
   private:
     int collect_identifier (std::int32_t& character);
     int collect_string (std::int32_t& character);
@@ -46,7 +51,8 @@ namespace smasm
     std::fstream m_file;
     std::vector<token> m_tokens;
     std::vector<fs::path> m_paths;
-    fs::path m_current_path;
+    fs::path m_current_path = "";
+    fs::path m_parent_path = "";
     std::size_t m_current_line = 0;
     std::size_t m_write_ptr = 0;
 

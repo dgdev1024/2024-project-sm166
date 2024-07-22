@@ -8,7 +8,6 @@ namespace smasm
   program::ptr parser::parse_program (lexer& _lexer)
   {
     program::ptr _program = statement::make<program>();
-    m_files.insert(_lexer.get_path());
 
     while (_lexer.has_more_tokens()) {
       auto stmt = parse_directive(_lexer);
@@ -117,6 +116,7 @@ namespace smasm
         case language_type::lt_byte:    return parse_data_statement(_lexer, 1);
         case language_type::lt_word:    return parse_data_statement(_lexer, 2);
         case language_type::lt_long:    return parse_data_statement(_lexer, 4);
+        case language_type::lt_include: return parse_include_statement(_lexer);
         default:
           std::cerr <<  "[parser] Un-implemented language statement: '" << lang_token.contents << "'."
                     <<  std::endl;
@@ -178,6 +178,22 @@ namespace smasm
         return statement::make<data_statement>(arr, size);
       }
     }
+  }
+
+  statement::ptr parser::parse_include_statement (lexer& _lexer)
+  {
+    auto filename_expr = parse_expression(_lexer);
+    if (filename_expr == nullptr) {
+      return nullptr;
+    } else if (filename_expr->get_syntax_type() != syntax_type::string_literal) {
+      std::cerr <<  "[parser] Expected string literal after 'include' in include statement."
+                <<  std::endl;
+      return nullptr;
+    }
+    
+    return statement::make<include_statement>(
+      expression_cast<string_literal>(filename_expr)
+    );
   }
 
   statement::ptr parser::parse_instruction_statement (lexer& _lexer)

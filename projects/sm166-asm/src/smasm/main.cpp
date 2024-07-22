@@ -59,7 +59,7 @@ int main (int argc, char** argv)
 
   smasm::assembly assembly;
   smasm::environment environment;
-  smasm::interpreter interpreter { lexer, assembly, environment };
+  smasm::interpreter interpreter { lexer, parser, assembly, environment };
   if (interpreter.evaluate(program) == nullptr) {
     return 1;
   }

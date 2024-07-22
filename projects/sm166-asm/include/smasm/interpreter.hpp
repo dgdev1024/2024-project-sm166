@@ -4,6 +4,7 @@
 
 #include <smasm/values.hpp>
 #include <smasm/lexer.hpp>
+#include <smasm/parser.hpp>
 #include <smasm/assembly.hpp>
 #include <smasm/environment.hpp>
 
@@ -15,6 +16,7 @@ namespace smasm
   public:
     interpreter (
       lexer& _lexer,
+      parser& _parser,
       assembly& _assembly,
       environment& _environment
     );
@@ -28,6 +30,7 @@ namespace smasm
     value::ptr evaluate_section_directive (const section_directive* dir);
     value::ptr evaluate_label_statement (const label_statement* stmt);
     value::ptr evaluate_data_statement (const data_statement* stmt);
+    value::ptr evaluate_include_statement (const include_statement* stmt);
     value::ptr evaluate_instruction_statement (const instruction_statement* stmt);
     value::ptr evaluate_identifier (const identifier* expr);
     value::ptr evaluate_address_expression (const address_literal* expr);
@@ -55,6 +58,7 @@ namespace smasm
 
   private:
     lexer& m_lexer;
+    parser& m_parser;
     assembly& m_assembly;
     environment& m_environment;
 

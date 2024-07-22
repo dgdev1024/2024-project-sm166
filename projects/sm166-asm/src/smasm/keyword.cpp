@@ -13,6 +13,7 @@ namespace smasm
     { "byte", { keyword_type::language, language_type::lt_byte } },
     { "word", { keyword_type::language, language_type::lt_word } },
     { "long", { keyword_type::language, language_type::lt_long } },
+    { "include", { keyword_type::language, language_type::lt_include } },
 
     // Directives
     { "size", { keyword_type::directive, directive_type::dt_size } },

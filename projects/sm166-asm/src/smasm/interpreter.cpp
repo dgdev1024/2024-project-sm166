@@ -7,10 +7,12 @@ namespace smasm
 
   interpreter::interpreter (
     lexer& _lexer,
+    parser& _parser,
     assembly& _assembly,
     environment& _environment
   ) :
     m_lexer { _lexer },
+    m_parser { _parser },
     m_assembly { _assembly },
     m_environment { _environment }
   {
@@ -40,6 +42,10 @@ namespace smasm
       case syntax_type::data_statement:
         return evaluate_data_statement(
           statement_cast<data_statement>(stmt).get()
+        );
+      case syntax_type::include_statement:
+        return evaluate_include_statement(
+          statement_cast<include_statement>(stmt).get()
         );
       case syntax_type::instruction_statement:
         return evaluate_instruction_statement(
@@ -185,6 +191,20 @@ namespace smasm
     }
 
     return value::make<void_value>();
+  }
+  
+  value::ptr interpreter::evaluate_include_statement (const include_statement* stmt)
+  {
+    auto string_expr = expression_cast<string_literal>(stmt->get_filename_expr());
+    if (m_lexer.lex_file(m_lexer.get_parent_path() / string_expr->get_string()) == false)
+    {
+      std::cerr << "[interpreter] Could not lex included source file \""
+                << string_expr->get_string() << "\"." << std::endl;
+      return nullptr;
+    }
+
+    auto program = m_parser.parse_program(m_lexer);
+    return evaluate_program(program.get());
   }
 
   value::ptr interpreter::evaluate_instruction_statement (const instruction_statement* stmt)

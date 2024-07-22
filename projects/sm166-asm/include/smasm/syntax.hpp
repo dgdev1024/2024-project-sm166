@@ -18,6 +18,7 @@ namespace smasm
 
     label_statement,
     data_statement,
+    include_statement,
     instruction_statement,
 
     address_literal,
@@ -318,6 +319,34 @@ namespace smasm
     std::string     m_mnemonic  = "";
     expression::ptr m_first     = nullptr;
     expression::ptr m_second    = nullptr;
+
+  };
+
+  class include_statement : public statement
+  {
+  public:
+    include_statement (
+      const expression::ptr& filename_expr
+    ) :
+      statement { syntax_type::include_statement },
+      m_filename_expr { filename_expr }
+    {}
+
+  public:
+    inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+    {
+      os << indent(i) << "include {\n";
+      if (m_filename_expr != nullptr) {
+        m_filename_expr->dump(os, i + 2);
+      }
+      os << indent(i) << "}\n";
+    }
+
+  public:
+    inline const expression::ptr& get_filename_expr () const { return m_filename_expr; }
+
+  private:
+    expression::ptr m_filename_expr = nullptr;
 
   };
 

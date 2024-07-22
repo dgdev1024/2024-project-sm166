@@ -33,7 +33,7 @@ namespace sm
     sm_setbit(m_interrupts_requested, (id & 0b111), true);
   }
 
-  void processor::step (memory& mem)
+  bool processor::step (memory& mem)
   {
 
     // Ensure that the CPU is not currently halted before attempting to execute the next 
@@ -1193,9 +1193,9 @@ namespace sm
         // Invalid Opcode
         default:
           std::cerr <<  "[processor::step] "
-                    <<  "Invalid operation code: " << opcode << "!"
+                    <<  "Invalid operation code: " << opcode << "."
                     <<  std::endl;
-          throw std::runtime_error { "[processor::step] Invalid operation code!" };
+          return false;
 
       }
     } else {
@@ -1216,6 +1216,8 @@ namespace sm
     if (check_flag(processor_flag_type::interrupt_enable) == true) {
       set_flag(processor_flag_type::interrupt_disable, false);
     }
+    
+    return true;
 
   }
 

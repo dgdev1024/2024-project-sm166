@@ -22,6 +22,7 @@ namespace smasm
     statement::ptr  parse_statement (lexer& _lexer);
     statement::ptr  parse_label_statement (lexer& _lexer);
     statement::ptr  parse_data_statement (lexer& _lexer, int size);
+    statement::ptr  parse_include_statement (lexer& _lexer);
     statement::ptr  parse_instruction_statement (lexer& _lexer);
   
   private:
@@ -31,9 +32,6 @@ namespace smasm
   
   private:
     expression::ptr parse_primary_expression (lexer& _lexer);
-
-  private:
-    std::unordered_set<fs::path> m_files;
 
   };
 

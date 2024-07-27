@@ -24,6 +24,7 @@ namespace smasm
   {
   public:
     using ptr = std::shared_ptr<value>;
+    using array = std::vector<ptr>;
 
   protected:
     inline value (
@@ -172,8 +173,16 @@ namespace smasm
 
   /* Function Values ******************************************************************************/
 
+  class environment;
+
   class function_value : public value
   {
+  public:
+    using native =
+      std::function<value::ptr(
+        const environment&
+      )>;
+
   public:
     inline function_value (
       const std::string& name,
@@ -183,18 +192,29 @@ namespace smasm
       value { value_type::function },
       m_name { name },
       m_parameter_list { parameter_list },
-      m_body { body }
+      m_body { body },
+      m_native { nullptr }
+    {}
+
+    inline function_value (
+      const native& _native
+    ) :
+      value { value_type::function },
+      m_native { _native }
     {}
 
   public:
     inline const std::string& get_name () const { return m_name; }
     inline const std::vector<std::string>& get_parameter_list () const { return m_parameter_list; }
     inline const statement::body& get_body () const { return m_body; }
+    inline const native& get_native () const { return m_native; }
+    inline bool is_native () const { return m_native != nullptr; }
 
   private:
     std::string m_name = "";
     std::vector<std::string> m_parameter_list;
     statement::body m_body;
+    native m_native = nullptr;
 
   };
 

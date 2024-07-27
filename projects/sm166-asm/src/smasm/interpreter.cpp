@@ -52,9 +52,21 @@ namespace smasm
         return evaluate_data_statement(
           statement_cast<data_statement>(stmt).get(), env
         );
+      case syntax_type::repeat_statement:
+        return evaluate_repeat_statement(
+          statement_cast<repeat_statement>(stmt).get(), env
+        );
+      case syntax_type::shift_statement:
+        return evaluate_shift_statement(
+          statement_cast<shift_statement>(stmt).get(), env
+        );
       case syntax_type::include_statement:
         return evaluate_include_statement(
           statement_cast<include_statement>(stmt).get(), env
+        );
+      case syntax_type::incbin_statement:
+        return evaluate_incbin_statement(
+          statement_cast<incbin_statement>(stmt).get(), env
         );
       case syntax_type::instruction_statement:
         return evaluate_instruction_statement(
@@ -67,6 +79,10 @@ namespace smasm
       case syntax_type::call_expression:
         return evaluate_call_expression(
           statement_cast<call_expression>(stmt).get(), env
+        );
+      case syntax_type::binary_expression:
+        return evaluate_binary_expression(
+          statement_cast<binary_expression>(stmt).get(), env
         );
       case syntax_type::identifier:
         return evaluate_identifier(
@@ -149,21 +165,58 @@ namespace smasm
   value::ptr interpreter::evaluate_variable_declaration_statement
     (const variable_declaration_statement* stmt, environment& env)
   {
-    auto key_expr = expression_cast<identifier>(stmt->get_key_expr());
+    // std::string key = expression_cast<identifier>(stmt->get_key_expr())->get_symbol();
+    std::string key = "";
+    auto key_expr = stmt->get_key_expr();
+    if (key_expr->get_syntax_type() == syntax_type::identifier)
+    {
+      key = expression_cast<identifier>(key_expr)->get_symbol();
+    }
+    else if (key_expr->get_syntax_type() == syntax_type::string_literal)
+    {
+      key = expression_cast<string_literal>(key_expr)->get_string();
+    }
+    else if (key_expr->get_syntax_type() == syntax_type::binary_expression)
+    {
+      value::ptr result = evaluate(key_expr, env);
+      if (result == nullptr) { return nullptr; }
+
+      if (result->get_value_type() == value_type::string)
+      {
+        key = value_cast<string_value>(result)->get_string();
+      }
+      else
+      {
+        return nullptr;
+      }
+    }
+    
+    if (key.starts_with("_") == true)
+    {
+      std::cerr << "[interpreter] Variables cannot start with '_'." << std::endl;
+      return nullptr;
+    }
+
     auto value = evaluate(stmt->get_value_expr(), env);
     if (value == nullptr) {
       std::cerr <<  "[interpreter] Could not evaluate value in declaration of variable '"
-                <<  key_expr->get_symbol() << "." << std::endl;
+                <<  key << "." << std::endl;
       return nullptr;
     } else if (value->get_value_type() == value_type::none) {
-      std::cerr <<  "[interpreter] Declaration of variable '" << key_expr->get_symbol()
+      std::cerr <<  "[interpreter] Declaration of variable '" << key
                 <<  "' has evaluated to no value." << std::endl;
       return nullptr;
     }
 
+    environment& target_env = (
+      stmt->is_global() == true ?
+        m_environment :
+        env
+    );
+    
     if (
-      env.declare_variable(
-        key_expr->get_symbol(),
+      target_env.declare_variable(
+        key,
         value,
         stmt->is_constant()
       ) == false
@@ -181,11 +234,13 @@ namespace smasm
     if (
       env.declare_variable(
         label_expr->get_symbol(), 
-        value::make<address_value>(m_assembly.get_current_cursor())
+        value::make<number_value>(m_assembly.get_current_cursor())
       ) == false
     ) {
       return nullptr;
     }
+
+    // std::cout << label_expr->get_symbol() << " = " << m_assembly.get_current_cursor() << std::endl;
 
     return value::make<void_value>();
   }
@@ -249,6 +304,57 @@ namespace smasm
     return value::make<void_value>();
   }
   
+  value::ptr interpreter::evaluate_repeat_statement (const repeat_statement* stmt,
+    environment& env)
+  {
+    value::ptr evaluated_count = evaluate(stmt->get_count_expr(), env);
+    if (evaluated_count == nullptr)
+    {
+      return nullptr;
+    }
+    else if (evaluated_count->get_value_type() != value_type::number)
+    {
+      return nullptr;
+    }
+  
+    environment scope_env { &env, environment_scope::repeat };
+    value::ptr last_evaluated = value::make<void_value>();
+    for (std::uint64_t i = 0; i < value_cast<number_value>(evaluated_count)->get_integer(); ++i)
+    {
+      scope_env.declare_variable("_iter", value::make<number_value>(i), false);
+    
+      for (const auto& body_stmt : stmt->get_body())
+      {
+        last_evaluated = evaluate(body_stmt, scope_env);
+        if (last_evaluated == nullptr)
+        {
+          std::cerr << "[interpreter] In iteration #" << i << " of repeat statement." << std::endl;
+          return nullptr;
+        }
+      }
+    }
+  
+    return value::make<void_value>();
+  }
+  
+  value::ptr interpreter::evaluate_shift_statement (const shift_statement* stmt,
+    environment& env)
+  {
+    auto number_expr = expression_cast<numeric_literal>(stmt->get_count_expr());
+    environment* function_scope = env.get_function_scope();
+    if (function_scope == nullptr)
+    {
+      std::cerr << "[interpreter] The 'shift' statement requires a function scope." << std::endl;
+      return nullptr;
+    }
+    else
+    {
+      function_scope->shift_arguments(number_expr->get_integer());
+    }
+  
+    return value::make<void_value>();
+  }
+  
   value::ptr interpreter::evaluate_include_statement (const include_statement* stmt,
     environment& env)
   {
@@ -262,6 +368,22 @@ namespace smasm
 
     auto program = m_parser.parse_program(m_lexer);
     return evaluate_program(program.get(), env);
+  }
+  
+  value::ptr interpreter::evaluate_incbin_statement (const incbin_statement* stmt,
+    environment& env)
+  {
+    (void) env;
+  
+    auto string_expr = expression_cast<string_literal>(stmt->get_filename_expr());
+    if (m_assembly.include_binary(m_lexer.get_parent_path() / string_expr->get_string()) == false)
+    {
+      std::cerr << "[interpreter] Could not write included binary file \""
+                << string_expr->get_string() << "\"." << std::endl;
+      return nullptr;
+    }
+
+    return value::make<void_value>();
   }
 
   value::ptr interpreter::evaluate_instruction_statement (const instruction_statement* stmt,
@@ -365,8 +487,14 @@ namespace smasm
     auto value = value::make<function_value>(expr->get_name(), expr->get_parameter_list(),
       expr->get_body());
 
+    environment& target_env = (
+      expr->is_global() == true ?
+        m_environment :
+        env
+    );
+
     if (
-      env.declare_variable(
+      target_env.declare_variable(
         expr->get_name(),
         value,
         true
@@ -387,7 +515,9 @@ namespace smasm
     {
       return nullptr;
     }
-    else if (variable->get_value_type() != value_type::function)
+    else if (
+      variable->get_value_type() != value_type::function
+    )
     {
       std::cerr <<  "[interpreter] Identifier '" << callee_expr->get_symbol()
                 <<  "' does not resolve to a function." << std::endl;
@@ -395,9 +525,10 @@ namespace smasm
     }
 
     auto function_val = value_cast<function_value>(variable);
-    environment scope_env { &env };
+    environment scope_env { &env, environment_scope::function };
     const auto& argument_list = expr->get_argument_list();
     const auto& parameter_list = function_val->get_parameter_list();
+    scope_env.declare_variable("_count", value::make<number_value>(argument_list.size()));
     for (std::size_t i = 0; i < argument_list.size(); ++i)
     {
       value::ptr evaluated_value = evaluate(argument_list.at(i), env);
@@ -416,6 +547,11 @@ namespace smasm
       }
     }
 
+    if (function_val->is_native() == true)
+    {
+      return function_val->get_native()(scope_env);
+    }
+
     value::ptr last_evaluated = value::make<void_value>();
     for (const auto& stmt : function_val->get_body())
     {
@@ -431,11 +567,176 @@ namespace smasm
     
     return last_evaluated;
   }
+  
+  namespace priv
+  {
+  
+    value::ptr number_vs_number (const value::ptr& lhs, const value::ptr& rhs,
+      const std::string& oper)
+    {
+      auto left  = value_cast<number_value>(lhs);
+      auto right = value_cast<number_value>(rhs);
+      
+      if (oper == "+")  
+        { return value::make<number_value>(left->get_number() + right->get_number()); }
+      else if (oper == "-")  
+        { return value::make<number_value>(left->get_number() - right->get_number()); }
+      else if (oper == "*")  
+        { return value::make<number_value>(left->get_number() * right->get_number()); }
+      else if (oper == "/") { 
+        if (right->get_number() == 0.0) {
+          std::cerr <<  "[interpreter] Attempted division by zero encountered." << std::endl;
+          return nullptr;
+        }
+        return value::make<number_value>(left->get_number() / right->get_number()); 
+      }
+      else if (oper == "%") { 
+        if (right->get_number() == 0.0) {
+          std::cerr <<  "[interpreter] Modulo with attempted division by zero encountered." 
+                    <<  std::endl;
+          return nullptr;
+        }
+        return value::make<number_value>(std::fmod(left->get_number(), right->get_number())); 
+      }
+      else if (oper == "&")  
+        { return value::make<number_value>(left->get_integer() & right->get_integer()); }
+      else if (oper == "|")  
+        { return value::make<number_value>(left->get_integer() | right->get_integer()); }
+      else if (oper == "^")  
+        { return value::make<number_value>(left->get_integer() ^ right->get_integer()); }
+      
+      std::cerr << "[interpreter] Invalid operation '" << oper
+                << "' encountered in number vs number binary expression."
+                << std::endl;
+      return nullptr;
+    }
+  
+    value::ptr address_vs_address (const value::ptr& lhs, const value::ptr& rhs,
+      const std::string& oper)
+    {
+      auto left  = value_cast<address_value>(lhs);
+      auto right = value_cast<address_value>(rhs);
+      
+      if (oper == "+")  
+        { return value::make<address_value>(left->get_address() + right->get_address()); }
+      else if (oper == "-")  
+        { return value::make<address_value>(left->get_address() - right->get_address()); }
+      else if (oper == "&")  
+        { return value::make<address_value>(left->get_address() & right->get_address()); }
+      else if (oper == "|")  
+        { return value::make<address_value>(left->get_address() | right->get_address()); }
+      else if (oper == "^")  
+        { return value::make<address_value>(left->get_address() ^ right->get_address()); }
+      
+      std::cerr << "[interpreter] Invalid operation '" << oper
+                << "' encountered in address vs address binary expression."
+                << std::endl;
+      return nullptr;
+    }
+  
+    value::ptr address_vs_number (const value::ptr& lhs, const value::ptr& rhs,
+      const std::string& oper)
+    {
+      auto left  = value_cast<address_value>(lhs);
+      auto right = value_cast<number_value>(rhs);
+      
+      if (oper == "+")  
+        { return value::make<address_value>(left->get_address() + right->get_integer()); }
+      else if (oper == "-")  
+        { return value::make<address_value>(left->get_address() - right->get_integer()); }
+      
+      std::cerr << "[interpreter] Invalid operation '" << oper
+                << "' encountered in address vs number binary expression."
+                << std::endl;
+      return nullptr;
+    }
+  
+    value::ptr string_vs_string (const value::ptr& lhs, const value::ptr& rhs,
+      const std::string& oper)
+    {
+      auto left  = value_cast<string_value>(lhs);
+      auto right = value_cast<string_value>(rhs);
+      
+      if (oper == "+")  
+      {
+        return value::make<string_value>(left->get_string() + right->get_string()); 
+      }
+      
+      std::cerr << "[interpreter] Invalid operation '" << oper
+                << "' encountered in string vs string binary expression."
+                << std::endl;
+      return nullptr;
+    }
+  
+    value::ptr string_vs_number (const value::ptr& lhs, const value::ptr& rhs,
+      const std::string& oper)
+    {
+      auto left  = value_cast<string_value>(lhs);
+      auto right = value_cast<number_value>(rhs);
+      
+      if (oper == "+")  
+      { 
+        return value::make<string_value>(left->get_string() + 
+          std::to_string(right->get_number())); 
+      }
+      
+      std::cerr << "[interpreter] Invalid operation '" << oper
+                << "' encountered in string vs number binary expression."
+                << std::endl;
+      return nullptr;
+    }
+  
+  }
+  
+  value::ptr interpreter::evaluate_binary_expression (const binary_expression* expr,
+    environment& env)
+  {
+    auto lhs = evaluate(expr->get_left(), env);
+    auto rhs = evaluate(expr->get_right(), env);
+    if (lhs == nullptr || rhs == nullptr)
+      { return nullptr; }
+    
+    if (
+      lhs->get_value_type() == value_type::number &&
+      rhs->get_value_type() == value_type::number
+    ) { return priv::number_vs_number(lhs, rhs, expr->get_oper()); }
+    else if (
+      lhs->get_value_type() == value_type::address &&
+      rhs->get_value_type() == value_type::address
+    ) { return priv::address_vs_address(lhs, rhs, expr->get_oper()); }
+    else if (
+      lhs->get_value_type() == value_type::address &&
+      rhs->get_value_type() == value_type::number
+    ) { return priv::address_vs_number(lhs, rhs, expr->get_oper()); }
+    else if (
+      lhs->get_value_type() == value_type::number &&
+      rhs->get_value_type() == value_type::address
+    ) { return priv::address_vs_number(rhs, lhs, expr->get_oper()); }
+    else if (
+      lhs->get_value_type() == value_type::string &&
+      rhs->get_value_type() == value_type::string
+    ) { return priv::string_vs_string(lhs, rhs, expr->get_oper()); }
+    else if (
+      lhs->get_value_type() == value_type::string &&
+      rhs->get_value_type() == value_type::number
+    ) { return priv::string_vs_number(lhs, rhs, expr->get_oper()); }
+    else if (
+      lhs->get_value_type() == value_type::number &&
+      rhs->get_value_type() == value_type::string
+    ) { return priv::string_vs_number(rhs, lhs, expr->get_oper()); }
+
+    return nullptr;
+  }
 
   value::ptr interpreter::evaluate_address_expression (const address_literal* expr,
     environment& env)
   {
     auto addr_value = evaluate(expr->get_address_expr(), env);
+    if (addr_value == nullptr)
+    {
+      return nullptr;
+    }
+
     if (addr_value->get_value_type() == value_type::number) {
       return value::make<address_value>(
         value_cast<number_value>(addr_value)->get_integer()

@@ -19,10 +19,16 @@ namespace smboy
     m_timer.initialize(this);
     m_realtime.initialize(this);
     m_renderer.initialize(this);
+    m_joypad.initialize(this);
     m_ram.initialize();
     m_processor.initialize();
     m_processor.set_cycle_function(std::bind(&emulator::on_tick_cycle, this, std::placeholders::_1));
     m_running = true;
+  }
+
+  void emulator::stop ()
+  {
+    m_running = false;
   }
   
   bool emulator::step ()
@@ -41,7 +47,7 @@ namespace smboy
   void emulator::on_tick_cycle (const std::uint64_t& cycle_count)
   {
     (void) cycle_count;
-  
+
     m_timer.tick();
     m_realtime.tick();
     m_renderer.tick(cycle_count);

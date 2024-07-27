@@ -21,18 +21,10 @@ namespace smboy
 
     // Initialize Memory Storage
     m_vram = m_vram0;
-    m_vram0.clear();    m_vram0.resize(vram_size);
-    m_vram1.clear();    m_vram1.resize(vram_size);
-    m_oam.clear();      m_oam.resize(oam_size);
-    m_bg_cram.clear();  m_bg_cram.resize(cram_size / 2);
-    m_obj_cram.clear(); m_obj_cram.resize(cram_size / 2);
-
-    std::cout << "BG  CRAM SIZE: " << m_bg_cram.size()  << std::endl;
-    std::cout << "OBJ CRAM SIZE: " << m_obj_cram.size() << std::endl;
     // m_screen.clear();   m_screen.resize(screen_width * screen_height);
 
     // Initialize Background Palette Memory
-    for (std::size_t i = 0; i < m_bg_cram.size(); i += 16)
+    for (std::size_t i = 0; i < cram_size; i += 16)
     {
       m_bg_cram[i     ] = 0xFF; m_obj_cram[i     ] = 0xFF;
       m_bg_cram[i +  1] = 0xFF; m_obj_cram[i +  1] = 0xFF;
@@ -41,15 +33,15 @@ namespace smboy
       m_bg_cram[i +  4] = 0xAA; m_obj_cram[i +  4] = 0xAA;
       m_bg_cram[i +  5] = 0xAA; m_obj_cram[i +  5] = 0xAA;
       m_bg_cram[i +  6] = 0xAA; m_obj_cram[i +  6] = 0xAA;
-      m_bg_cram[i +  7] = 0xFF; m_obj_cram[i +  7] = 0xFF;
+      m_bg_cram[i +  7] = 0xAA; m_obj_cram[i +  7] = 0xAA;
       m_bg_cram[i +  8] = 0x55; m_obj_cram[i +  8] = 0x55;
       m_bg_cram[i +  9] = 0x55; m_obj_cram[i +  9] = 0x55;
       m_bg_cram[i + 10] = 0x55; m_obj_cram[i + 10] = 0x55;
-      m_bg_cram[i + 11] = 0xFF; m_obj_cram[i + 11] = 0xFF;
+      m_bg_cram[i + 11] = 0x55; m_obj_cram[i + 11] = 0x55;
       m_bg_cram[i + 12] = 0x00; m_obj_cram[i + 12] = 0x00;
       m_bg_cram[i + 13] = 0x00; m_obj_cram[i + 13] = 0x00;
       m_bg_cram[i + 14] = 0x00; m_obj_cram[i + 14] = 0x00;
-      m_bg_cram[i + 15] = 0xFF; m_obj_cram[i + 15] = 0xFF;
+      m_bg_cram[i + 15] = 0x00; m_obj_cram[i + 15] = 0x00;
     }
 
     // Initialize Internal Values
@@ -69,10 +61,18 @@ namespace smboy
     m_obj_pal_spec          = 0x00;
     m_priority_mode         = 0x00;
 
+    // Initialize frame time...
+    m_start = std::chrono::system_clock::now();
+
   }
 
   void renderer::tick (const std::uint64_t& cycle_count)
   {
+  
+    // Don't bother ticking if the renderer has no parent emulator attached.
+    if (m_emulator == nullptr) {
+      return;
+    }
     
     // Check the renderer's master enable. Don't bother ticking if it is turned off.
     if (m_control.master_enable == false) {
@@ -102,13 +102,13 @@ namespace smboy
   std::uint8_t renderer::read_vram (std::uint32_t address) const
   {
     if (
-      address >= oam_size ||
+      address >= vram_size ||
       m_status.mode == display_mode::dm_drawing_pixels
     ) { 
       return 0xFF; 
     }
 
-    return m_vram.at(address);
+    return m_vram[address];
   }
 
   std::uint8_t renderer::read_oam (std::uint32_t address) const
@@ -121,7 +121,7 @@ namespace smboy
       return 0xFF; 
     }
 
-    const std::uint8_t* oam_bytes = reinterpret_cast<const std::uint8_t*>(m_oam.data());
+    const std::uint8_t* oam_bytes = reinterpret_cast<const std::uint8_t*>(m_oam);
     return oam_bytes[address]; 
   }
 
@@ -131,6 +131,10 @@ namespace smboy
       address < vram_size &&
       m_status.mode != display_mode::dm_drawing_pixels
     ) {
+      // std::cout 
+      //           << "Writing 0x" << (int) value << " to address $" << address << "..."
+      //           << std::endl;
+
       m_vram[address] = value;
     }
   }
@@ -142,9 +146,21 @@ namespace smboy
       m_status.mode != display_mode::dm_object_scan &&
       m_status.mode != display_mode::dm_drawing_pixels
     ) {
-      std::uint8_t* oam_bytes = reinterpret_cast<std::uint8_t*>(m_oam.data());
+      std::uint8_t* oam_bytes = reinterpret_cast<std::uint8_t*>(m_oam);
       oam_bytes[address] = value;
     }
+  }
+
+  /** Screen Buffer Accesses **********************************************************************/
+
+  const std::uint32_t* renderer::get_screen_buffer () const
+  {
+    return m_screen;
+  }
+
+  const std::uint8_t* renderer::get_screen_bytes () const
+  {
+    return reinterpret_cast<const std::uint8_t*>(m_screen);
   }
 
   /** Non-Inline Hardware Register Accesses *******************************************************/
@@ -156,7 +172,7 @@ namespace smboy
       return 0xFF;
     }
 
-    return m_bg_cram.at(m_bg_pal_spec & 0b01111111);
+    return m_bg_cram[m_bg_pal_spec & 0b01111111];
   }
 
   std::uint8_t renderer::read_reg_obpd () const
@@ -166,7 +182,7 @@ namespace smboy
       return 0xFF;
     }
 
-    return m_obj_cram.at(m_obj_pal_spec & 0b01111111);
+    return m_obj_cram[m_obj_pal_spec & 0b01111111];
   }
 
   void renderer::write_reg_dma4 ()
@@ -232,17 +248,47 @@ namespace smboy
       // blank mode.
       if (m_line >= screen_height)
       {
+      
+        // Get a pointer to the emulator's processor.
+        sm::processor& processor = m_emulator->get_processor();
 
         // Move to vertical blank mode and request the vblank interrupt.
         m_status.mode = display_mode::dm_vertical_blank;
-        m_emulator->get_processor().request_interrupt(interrupt_type::int_vblank);
+        processor.request_interrupt(interrupt_type::int_vblank);
 
         // Also request a STAT interrupt, if desired.
         if (m_status.vblank_stat == 1) {
-          m_emulator->get_processor().request_interrupt(interrupt_type::int_lcd);
+          processor.request_interrupt(interrupt_type::int_lcd);
         }
 
-        // TODO: Update FPS
+        // Update FPS
+        m_current_frame++;
+        m_end = std::chrono::system_clock::now();
+        std::chrono::duration<float, std::milli> frame = (m_end - m_prev);
+        static constexpr float FIXED_TIMESTEP = (1000.0f / 59.7f);
+        if (frame.count() < FIXED_TIMESTEP)
+        {
+          std::this_thread::sleep_for(
+            std::chrono::duration<float, std::milli>(FIXED_TIMESTEP - frame.count())
+          );
+        }
+
+        std::chrono::duration<float, std::milli> dur = (m_end - m_start);
+        if (dur.count() >= 1000.0f)
+        {
+          m_start = m_end;
+          m_fps = m_current_frame;
+          m_current_frame = 0;
+          std::printf("[renderer] FPS: %lu\n", m_fps);
+        }
+
+        m_prev = std::chrono::system_clock::now();
+        
+        // On VBlank Function
+        if (m_on_vblank != nullptr)
+        {
+          m_on_vblank(*m_emulator);
+        }
 
       }
       else
@@ -353,7 +399,7 @@ namespace smboy
       }
       else
       {
-        std::uint8_t* oam_bytes = reinterpret_cast<std::uint8_t*>(m_oam.data());
+        std::uint8_t* oam_bytes = reinterpret_cast<std::uint8_t*>(m_oam);
         oam_bytes[dma_byte] = m_emulator->get_bus().read_byte(m_dma_source);
         m_dma_source++;
       }
@@ -387,9 +433,9 @@ namespace smboy
       // The lower the index, the higher the priority.
       //
       // As such, iterate over OAM in reverse order here.
-      for (int object_index = object_count - 1; object_index >= 0; --object_index)
+      for (std::int8_t object_index = object_count - 1; object_index >= 0; --object_index)
       {
-        const object& obj = m_oam.at(object_index);
+        const object& obj = m_oam[object_index];
 
         // Add the object's index to the line object indices array if the following are true:
         //
@@ -417,7 +463,7 @@ namespace smboy
       // then the object with the lower index in OAM has priority.
       for (std::size_t object_index = 0; object_index < object_count; ++object_index)
       {
-        const object& obj = m_oam.at(object_index);
+        const object& obj = m_oam[object_index];
         
         if (
           obj.x_position > 0 &&
@@ -434,8 +480,8 @@ namespace smboy
             std::begin(m_line_object_indices) + m_line_object_count,
             [&] (const std::uint8_t index_a, const std::uint8_t index_b)
             {
-              const auto& object_a = m_oam.at(index_a);
-              const auto& object_b = m_oam.at(index_b);
+              const auto& object_a = m_oam[index_a];
+              const auto& object_b = m_oam[index_b];
 
               if (object_a.x_position == object_b.x_position) {
                 return index_a > index_b;
@@ -457,15 +503,25 @@ namespace smboy
 
   void renderer::push_color_value (std::uint32_t color_value)
   {
-    // (void) color_value;
-    m_fetcher.fifo.push(color_value);
+    // m_fetcher.fifo.push(color_value);
+    // m_fetcher.fifo[m_fetcher.size++] = color_value;
+
+    m_fetcher.fifo[m_fetcher.rear] = color_value;
+    m_fetcher.rear = (m_fetcher.rear + 1) % 32;
+    m_fetcher.size++;
   }
 
-  std::uint32_t renderer::pop_color_value ()
+  // std::uint32_t renderer::pop_color_value ()
+  void renderer::pop_color_value (std::uint32_t& color_value)
   {
-    std::uint32_t color_value = m_fetcher.fifo.front();
-    m_fetcher.fifo.pop();
-    return color_value;
+    // std::uint32_t color_value = m_fetcher.fifo.front();
+    // m_fetcher.fifo.pop();
+    // return color_value;
+    // return m_fetcher.fifo[--m_fetcher.size];
+
+    color_value = m_fetcher.fifo[m_fetcher.front];
+    m_fetcher.front = (m_fetcher.front + 1) % 32;
+    m_fetcher.size--;
   }
 
   std::uint32_t renderer::get_bgw_color (std::uint8_t palette_index, std::uint8_t color_index)
@@ -473,23 +529,19 @@ namespace smboy
 
     // Ensure that the palette and color indices are correct.
     palette_index = (palette_index  % 8);
-    color_index   = (color_index    % 8);
+    color_index   = (color_index    % 4);
 
     // Calculate the starting index in color RAM of the color we wish to obtain.
     std::uint8_t start_index = (palette_index * bytes_per_palette) + (color_index * 4);
 
     // Retrieve the color components from color RAM. Tney are laid out in the following order:
     //  - Red, Green, Blue, Alpha
-    std::uint8_t  red     = m_bg_cram.at(start_index),
-                  green   = m_bg_cram.at(start_index + 1),
-                  blue    = m_bg_cram.at(start_index + 2),
-                  alpha   = m_bg_cram.at(start_index + 3);
-
+    //
     // Create the color value by bitwise OR'ing the above bytes. Return the result.
-    return        (red    << 24) |
-                  (green  << 16) |
-                  (blue   <<  8) |
-                  (alpha       );
+    return        (m_bg_cram[start_index]      << 24) |
+                  (m_bg_cram[start_index + 1]  << 16) |
+                  (m_bg_cram[start_index + 2]  <<  8) |
+                  (m_bg_cram[start_index + 3]       );
 
   }
 
@@ -500,20 +552,14 @@ namespace smboy
     // color, just with object CRAM.
 
     palette_index = (palette_index  % 8);
-    color_index   = (color_index    % 8);
+    color_index   = (color_index    % 4);
 
     std::uint8_t start_index = (palette_index * bytes_per_palette) + (color_index * 4);
 
-    std::uint8_t  red     = m_obj_cram.at(start_index),
-                  green   = m_obj_cram.at(start_index + 1),
-                  blue    = m_obj_cram.at(start_index + 2),
-                  alpha   = m_obj_cram.at(start_index + 3);
-
-    return        (red    << 24) |
-                  (green  << 16) |
-                  (blue   <<  8) |
-                  (alpha       );
-
+    return        (m_obj_cram[start_index]      << 24) |
+                  (m_obj_cram[start_index + 1]  << 16) |
+                  (m_obj_cram[start_index + 2]  <<  8) |
+                  (m_obj_cram[start_index + 3]       );
   }  
 
   std::uint32_t renderer::fetch_obj_pixel (std::uint8_t bit, std::uint8_t color_index, 
@@ -533,7 +579,7 @@ namespace smboy
 
       // Get a handle to the fetched object in OAM.
       std::uint8_t obj_index = m_fetcher.fetched_obj_indices[i];
-      const object& obj = m_oam.at(obj_index);
+      const object& obj = m_oam[obj_index];
 
       // Using the object's X position in the visible screen, ensure that the fetcher has not
       // already past that point.
@@ -561,7 +607,7 @@ namespace smboy
 
       // Check to see if one of the following is true:
       // - The background and window layers do not have priority over this object.
-      // - The background/window color index (`old_color_index`) is zero.
+      // - The background/window color index (`bgw_color_index`) is zero.
       if (
         bgw_color_index == 0 ||
         m_control.bgw_priority == 0 ||
@@ -587,7 +633,7 @@ namespace smboy
   {
 
     // Ensure that the fetcher's FIFO is not currently full.
-    if (m_fetcher.fifo.size() > 8) { return false; }
+    if (m_fetcher.size > 8) { return false; }
 
     // Element 3 of the `bgw_fetch_data` array contains the background/window tile's attributes.
     tile_attributes attributes = { .state = m_fetcher.bgw_fetch_data[3] };
@@ -636,11 +682,11 @@ namespace smboy
   {
 
     // Only shift a pixel from the FIFO when there are more than eight pixels present therein.
-    if (m_fetcher.fifo.size() > 8)
+    if (m_fetcher.size > 8)
     {
 
       // Pop the next color value from the FIFO.
-      std::uint32_t color_value = pop_color_value();
+      std::uint32_t color_value; pop_color_value(color_value);
 
       // Ensure that the FIFO's current pixel is within screen bounds.
       if (m_fetcher.line_x >= (m_scroll_x % 8))
@@ -652,7 +698,7 @@ namespace smboy
         (void) index;
 
         // Emplace the pixel. Advance the FIFO's pushed pixel count afterward.
-        // m_screen[index] = color_value;
+        m_screen[index] = color_value;
         m_fetcher.pushed_x++;
       }
 
@@ -677,8 +723,18 @@ namespace smboy
 
     // Read the tilemap number from VRAM bank 0, and the tilemap attributes from VRAM bank 1.
     // Place the values in elements `0` and `3` of the fetch data array, respectively.
-    m_fetcher.bgw_fetch_data[0] = m_vram0.at(target_address);
-    m_fetcher.bgw_fetch_data[3] = m_vram1.at(target_address);
+    m_fetcher.bgw_fetch_data[0] = m_vram0[target_address];
+    m_fetcher.bgw_fetch_data[3] = m_vram1[target_address];
+
+    // std::cout << std::hex 
+    //           << "Tilemap Start Address: " << tilemap_address << " | "
+    //           << "Tile Y: " << (int) tile_y << " | "
+    //           << "Target Offset: " << target_offset << " | "
+    //           << "Target Address: " << target_address << " | "
+    //           << "Tile Number: " << (int) m_fetcher.bgw_fetch_data[0]
+    //           << std::endl;
+    // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  
   }
 
   void renderer::load_window_tile_number ()
@@ -709,7 +765,7 @@ namespace smboy
                                       (tile_y * 32);
 
       // Read the tilemap number from VRAM bank 0.
-      m_fetcher.bgw_fetch_data[0] = m_vram0.at(target_address);
+      m_fetcher.bgw_fetch_data[0] = m_vram0[target_address];
 
     }
   }
@@ -723,7 +779,7 @@ namespace smboy
 
       // Get the object pointed to from OAM.
       std::uint8_t obj_index = m_line_object_indices[i];
-      const object& obj = m_oam.at(obj_index);
+      const object& obj = m_oam[obj_index];
 
       // Calculate the object's scrolling offset, if any.
       std::int16_t obj_x = (obj.x_position - 8) + (m_scroll_x % 8);
@@ -756,7 +812,7 @@ namespace smboy
 
       // Get the object from OAM.
       std::uint8_t obj_index = m_fetcher.fetched_obj_indices[i];
-      const object& obj = m_oam.at(obj_index);
+      const object& obj = m_oam[obj_index];
 
       // Retrieve the object tile's Y position in memory. Adjust according to the object's `y_flip`
       // attribute.
@@ -774,7 +830,7 @@ namespace smboy
       std::uint32_t target_address =  (tile_number * 16) +
                                       tile_y +
                                       offset;
-      m_fetcher.obj_fetch_data[(i * 2) + offset] = m_vram.at(target_address);
+      m_fetcher.obj_fetch_data[(i * 2) + offset] = m_vram[target_address];
 
     }
 
@@ -806,8 +862,8 @@ namespace smboy
           //  - ...background layer.
           //  - ...window layer, if enabled.
           //  - ...object layer, if enabled and there are objects on the current scanline.
-          load_background_tile_number();
-          if (m_control.win_enable == 1) { load_window_tile_number(); }
+          if (m_control.bgw_priority) { load_background_tile_number(); }
+          if (m_control.bgw_priority && m_control.win_enable) { load_window_tile_number(); }
           if (m_control.obj_enable && m_line_object_count > 0) { load_object_tile_number(); }
 
           // Advance the fetcher's X coordinate by 8 pixels, then proceed to fetch the tile data.
@@ -822,12 +878,20 @@ namespace smboy
           // from. Adjust according to the BGW tile data area flag, if needed.
           std::uint8_t  tile_number = m_fetcher.bgw_fetch_data[0];
           std::uint32_t target_address = (tile_number * 16) + m_fetcher.tile_y;
-          if (tile_number < 127 && m_control.bgw_address_mode == 0) {
+          if (tile_number < 128 && m_control.bgw_address_mode == 0) {
             target_address += 0x1000;
           }
 
+          // if (tile_number > 0x00)
+          // {
+          //   std::cout << std::hex
+          //             << "Tile Number: " << (int) tile_number << " | "
+          //             << "Target Address: " << target_address
+          //             << std::endl;
+          // }
+
           // Read and store the low byte of the tile from the current VRAM bank.
-          m_fetcher.bgw_fetch_data[1] = m_vram.at(target_address);
+          m_fetcher.bgw_fetch_data[1] = m_vram[target_address];
 
           // Load any object tile data here.
           load_object_tile_data(0);
@@ -843,11 +907,11 @@ namespace smboy
           // the tile. Offset the target address by an additional 1.
           std::uint8_t  tile_number = m_fetcher.bgw_fetch_data[0];
           std::uint32_t target_address = (tile_number * 16) + m_fetcher.tile_y + 1;
-          if (tile_number < 127 && m_control.bgw_address_mode == 0) {
+          if (tile_number < 128 && m_control.bgw_address_mode == 0) {
             target_address += 0x1000;
           }
 
-          m_fetcher.bgw_fetch_data[2] = m_vram.at(target_address);
+          m_fetcher.bgw_fetch_data[2] = m_vram[target_address];
           load_object_tile_data(1);
 
           // Proceed to sleep for two line ticks.
@@ -882,9 +946,9 @@ namespace smboy
 
   void renderer::reset_pipeline ()
   {
-    while (m_fetcher.fifo.size() > 0) {
-      m_fetcher.fifo.pop();
-    }
+    m_fetcher.size = 0;
+    m_fetcher.front = 0;
+    m_fetcher.rear = 0;
   }
   
   /* Helper Methods *******************************************************************************/

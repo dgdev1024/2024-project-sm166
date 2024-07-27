@@ -39,7 +39,13 @@ namespace smasm
       environment& env);
     value::ptr evaluate_data_statement (const data_statement* stmt,
       environment& env);
+    value::ptr evaluate_repeat_statement (const repeat_statement* stmt,
+      environment& env);
+    value::ptr evaluate_shift_statement (const shift_statement* stmt,
+      environment& env);
     value::ptr evaluate_include_statement (const include_statement* stmt,
+      environment& env);
+    value::ptr evaluate_incbin_statement (const incbin_statement* stmt,
       environment& env);
     value::ptr evaluate_instruction_statement (const instruction_statement* stmt,
       environment& env);
@@ -48,6 +54,8 @@ namespace smasm
     value::ptr evaluate_function_expression (const function_expression* expr,
       environment& env);
     value::ptr evaluate_call_expression (const call_expression* expr,
+      environment& env);
+    value::ptr evaluate_binary_expression (const binary_expression* expr,
       environment& env);
     value::ptr evaluate_address_expression (const address_literal* expr,
       environment& env);
@@ -81,6 +89,7 @@ namespace smasm
     parser& m_parser;
     assembly& m_assembly;
     environment& m_environment;
+    bool m_first = false;
 
   };
   

@@ -20,6 +20,9 @@ namespace smasm
     label_statement,
     data_statement,
     include_statement,
+    incbin_statement,
+    repeat_statement,
+    shift_statement,
     instruction_statement,
 
     address_literal,
@@ -214,18 +217,21 @@ namespace smasm
     inline variable_declaration_statement (
       const expression::ptr& key_expr,
       const expression::ptr& value_expr,
-      bool constant = false
+      bool constant = false,
+      bool global = false
     ) :
       statement { syntax_type::variable_declaration_statement },
       m_key_expr { key_expr },
       m_value_expr { value_expr },
-      m_constant { constant }
+      m_constant { constant },
+      m_global { global }
     {}
 
   public:
     inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
     {
-      os << indent(i) << (m_constant == true ? "constant" : "variable") << " {\n";
+      os  << indent(i) << (m_global == true ? "global " : "local ") 
+          << (m_constant == true ? "constant" : "variable") << " {\n";
       if (m_key_expr != nullptr) {
         os << indent(i + 2) << "key\n";
         m_key_expr->dump(os, i + 4);
@@ -241,11 +247,13 @@ namespace smasm
     inline const expression::ptr& get_key_expr () const { return m_key_expr; }
     inline const expression::ptr& get_value_expr () const { return m_value_expr; }
     inline bool is_constant () const { return m_constant; }
+    inline bool is_global () const { return m_global; }
 
   private:
     expression::ptr m_key_expr = nullptr;
     expression::ptr m_value_expr = nullptr;
     bool m_constant = false;
+    bool m_global = false;
 
   };
 
@@ -365,11 +373,89 @@ namespace smasm
     expression::ptr m_second    = nullptr;
 
   };
+  
+  class repeat_statement : public statement
+  {
+  public:
+    inline repeat_statement (
+      const expression::ptr& count_expr,
+      const statement::body& body
+    ) :
+      statement { syntax_type::repeat_statement },
+      m_count_expr { count_expr },
+      m_body { body }
+    {}
+  
+  public:
+    inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+    {
+      os << indent(i) << "repeat statement {\n";
+      {
+        if (m_count_expr != nullptr)
+        {
+          os << indent(i + 2) << "count\n";
+          m_count_expr->dump(os, i + 4);
+        }
+        
+        if (m_body.empty() == false)
+        {
+          os << indent(i + 2) << "body {\n";
+          for (const auto& stmt : m_body)
+          {
+            stmt->dump(os, i + 4);
+          }
+          os << indent(i + 2) << "}\n";
+        }
+      }
+      os << indent(i) << "}\n";
+    }
+  
+  public:
+    inline const expression::ptr& get_count_expr () const { return m_count_expr; }
+    inline const statement::body& get_body () const { return m_body; }
+  
+  private:
+    expression::ptr m_count_expr = nullptr;
+    statement::body m_body;
+  
+  };
+  
+  class shift_statement : public statement
+  {
+  public:
+    inline shift_statement (
+      const expression::ptr& count_expr
+    ) :
+      statement { syntax_type::shift_statement },
+      m_count_expr { count_expr }
+    {}
+  
+  public:
+    inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+    {
+      os << indent(i) << "shift statement {\n";
+      {
+        if (m_count_expr != nullptr)
+        {
+          os << indent(i + 2) << "count\n";
+          m_count_expr->dump(os, i + 4);
+        }
+      }
+      os << indent(i) << "}\n";
+    }
+  
+  public:
+    inline const expression::ptr& get_count_expr () const { return m_count_expr; }
+  
+  private:
+    expression::ptr m_count_expr = nullptr;
+  
+  };
 
   class include_statement : public statement
   {
   public:
-    include_statement (
+    inline include_statement (
       const expression::ptr& filename_expr
     ) :
       statement { syntax_type::include_statement },
@@ -380,6 +466,34 @@ namespace smasm
     inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
     {
       os << indent(i) << "include {\n";
+      if (m_filename_expr != nullptr) {
+        m_filename_expr->dump(os, i + 2);
+      }
+      os << indent(i) << "}\n";
+    }
+
+  public:
+    inline const expression::ptr& get_filename_expr () const { return m_filename_expr; }
+
+  private:
+    expression::ptr m_filename_expr = nullptr;
+
+  };
+
+  class incbin_statement : public statement
+  {
+  public:
+    inline incbin_statement (
+      const expression::ptr& filename_expr
+    ) :
+      statement { syntax_type::incbin_statement },
+      m_filename_expr { filename_expr }
+    {}
+
+  public:
+    inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+    {
+      os << indent(i) << "include binary {\n";
       if (m_filename_expr != nullptr) {
         m_filename_expr->dump(os, i + 2);
       }
@@ -433,18 +547,21 @@ namespace smasm
     inline function_expression (
       const std::string& name,
       const std::vector<std::string>& parameter_list,
-      const statement::body& body
+      const statement::body& body,
+      bool global = false
     ) :
       expression { syntax_type::function_expression },
       m_name { name },
       m_parameter_list { parameter_list },
-      m_body { body }
+      m_body { body },
+      m_global { global }
     {}
 
   public:
     inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
     {
-      os << indent(i) << "function '" << m_name << "' {\n";
+      os << indent(i) << (m_global == true ? "global " : "local ") 
+         << "function '" << m_name << "' {\n";
       {
         if (m_parameter_list.empty() == false) {
           os << indent(i + 2) << "parameters {\n";
@@ -468,11 +585,13 @@ namespace smasm
     inline const std::string& get_name () const { return m_name; }
     inline const std::vector<std::string>& get_parameter_list () const { return m_parameter_list; }
     inline const statement::body& get_body () const { return m_body; }
+    inline bool is_global () const { return m_global; }
 
   private:
     std::string m_name = "";
     std::vector<std::string> m_parameter_list;
     statement::body m_body;
+    bool m_global = false;
 
   };
 
@@ -611,6 +730,7 @@ namespace smasm
   public:
     inline double get_number () const { return m_value; }
     inline std::uint64_t get_integer () const { return static_cast<std::uint64_t>(m_value); }
+    inline std::int64_t get_signed_integer () const { return static_cast<std::int64_t>(m_value); }
   
   private:
     double m_value = 0.0;

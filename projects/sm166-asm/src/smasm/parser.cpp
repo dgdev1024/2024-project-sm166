@@ -116,7 +116,10 @@ namespace smasm
         case language_type::lt_byte:    return parse_data_statement(_lexer, 1);
         case language_type::lt_word:    return parse_data_statement(_lexer, 2);
         case language_type::lt_long:    return parse_data_statement(_lexer, 4);
+        case language_type::lt_repeat:  return parse_repeat_statement(_lexer);
+        case language_type::lt_shift:   return parse_shift_statement(_lexer);
         case language_type::lt_include: return parse_include_statement(_lexer);
+        case language_type::lt_incbin:  return parse_incbin_statement(_lexer);
         case language_type::lt_let:     return parse_variable_declaration_statement(_lexer, false);
         case language_type::lt_const:   return parse_variable_declaration_statement(_lexer, true);
         case language_type::lt_function:return parse_function_expression(_lexer);
@@ -134,28 +137,67 @@ namespace smasm
 
   statement::ptr parser::parse_variable_declaration_statement (lexer& _lexer, bool constant)
   {
+    // bool global = (
+    //   _lexer.token_at().get_keyword().type == keyword_type::language &&
+    //   _lexer.token_at().get_keyword().param_one == language_type::lt_global
+    // );
+    // if (global == true)
+    // {
+    //   _lexer.discard_token();
+    // }
+    bool global = false;
+    auto global_kw = _lexer.token_at().get_keyword();
+    if (global_kw.type == keyword_type::language)
+    {
+      if (global_kw.param_one == language_type::lt_global)
+      {
+        global = true;
+        _lexer.discard_token();
+      }
+      else if (global_kw.param_one == language_type::lt_local)
+      {
+        _lexer.discard_token();
+      }
+    }
+
     auto key_expr = parse_primary_expression(_lexer);
+    std::string key = "";
     if (key_expr == nullptr) {
       return nullptr;
-    } else if (key_expr->get_syntax_type() != syntax_type::identifier) {
-      std::cerr <<  "[parser] Expected key identifier in variable declaration."
+    } else if (key_expr->get_syntax_type() == syntax_type::identifier) {
+      auto key_identifier = expression_cast<identifier>(key_expr);
+      if (key_identifier->get_keyword().type != keyword_type::none)
+      {
+        std::cerr <<  "[parser] Variable key identifier '" << key_identifier->get_symbol() 
+                  <<  "' is a reserved keyword."
+                  <<  std::endl;
+        return nullptr;
+      }
+
+      key = key_identifier->get_symbol();
+    } else if (key_expr->get_syntax_type() == syntax_type::string_literal) {
+      auto key_string = expression_cast<string_literal>(key_expr);
+      if (keyword::lookup(key_string->get_string()).type != keyword_type::none)
+      {
+        std::cerr <<  "[parser] Variable key string '" << key_string->get_string()
+                  <<  "' resolves to a reserved keyword."
+                  <<  std::endl;
+        return nullptr;
+      }
+
+      key = key_string->get_string();
+    } else if (key_expr->get_syntax_type() == syntax_type::binary_expression) {
+      key = "<binary expression>";
+    } else {
+      std::cerr <<  "[parser] Expected key in variable declaration to be a string or identifier."
                 <<  std::endl;
       return nullptr;
     } 
-    
-    auto key_identifier = expression_cast<identifier>(key_expr);
-    if (key_identifier->get_keyword().type != keyword_type::none)
-    {
-      std::cerr <<  "[parser] Variable key identifier '" << key_identifier->get_symbol() 
-                <<  "' is a reserved keyword."
-                <<  std::endl;
-      return nullptr;
-    }
 
     if (_lexer.discard_token().type != token_type::equals) 
     {
       std::cerr <<  "[parser] Expected '=' after key in declaration of variable '"
-                <<  key_identifier->get_symbol() << "'."
+                <<  key << "'."
                 <<  std::endl;
       return nullptr;
     }
@@ -165,7 +207,7 @@ namespace smasm
       return nullptr;
     }
 
-    return statement::make<variable_declaration_statement>(key_expr, value_expr, constant);
+    return statement::make<variable_declaration_statement>(key_expr, value_expr, constant, global);
   }
 
   statement::ptr parser::parse_label_statement (lexer& _lexer)
@@ -218,6 +260,59 @@ namespace smasm
       }
     }
   }
+  
+  statement::ptr parser::parse_repeat_statement (lexer& _lexer)
+  {
+    expression::ptr count_expr = parse_expression(_lexer);
+    if (count_expr == nullptr)
+    {
+      return nullptr;
+    }
+    
+    if (_lexer.discard_token().type != token_type::open_brace)
+    {
+      std::cerr << "[parser] Expected '{' after count expression in repeat statement."
+                << std::endl;
+      return nullptr;
+    }
+    
+    statement::body body;
+    while (true)
+    {
+      if (_lexer.token_at().type == token_type::close_brace)
+      {
+        _lexer.discard_token();
+        break;
+      }
+      
+      statement::ptr stmt = parse_statement(_lexer);
+      if (stmt == nullptr)
+      {
+        return nullptr;
+      }
+      
+      body.push_back(stmt);
+    }
+    
+    return statement::make<repeat_statement>(count_expr, body);
+  }
+  
+  statement::ptr parser::parse_shift_statement (lexer& _lexer)
+  {
+    expression::ptr count_expr = parse_expression(_lexer);
+    if (count_expr == nullptr)
+    {
+      return nullptr;
+    }
+    else if (count_expr->get_syntax_type() != syntax_type::numeric_literal)
+    {
+      std::cerr << "[parser] Expected numeric literal for count expression in shift statement."
+                << std::endl;
+      return nullptr;
+    }
+    
+    return statement::make<shift_statement>(count_expr);
+  }
 
   statement::ptr parser::parse_include_statement (lexer& _lexer)
   {
@@ -231,6 +326,22 @@ namespace smasm
     }
     
     return statement::make<include_statement>(
+      expression_cast<string_literal>(filename_expr)
+    );
+  }
+
+  statement::ptr parser::parse_incbin_statement (lexer& _lexer)
+  {
+    auto filename_expr = parse_expression(_lexer);
+    if (filename_expr == nullptr) {
+      return nullptr;
+    } else if (filename_expr->get_syntax_type() != syntax_type::string_literal) {
+      std::cerr <<  "[parser] Expected string literal after 'incbin' in include binary statement."
+                <<  std::endl;
+      return nullptr;
+    }
+    
+    return statement::make<incbin_statement>(
       expression_cast<string_literal>(filename_expr)
     );
   }
@@ -282,11 +393,26 @@ namespace smasm
       }
     }
 
-    return parse_additive_expression(_lexer);
+    return parse_bitwise_expression(_lexer);
   }
 
   expression::ptr parser::parse_function_expression (lexer& _lexer)
   {
+    bool global = false;
+    auto global_kw = _lexer.token_at().get_keyword();
+    if (global_kw.type == keyword_type::language)
+    {
+      if (global_kw.param_one == language_type::lt_global)
+      {
+        global = true;
+        _lexer.discard_token();
+      }
+      else if (global_kw.param_one == language_type::lt_local)
+      {
+        _lexer.discard_token();
+      }
+    }
+
     auto name_expr = parse_primary_expression(_lexer);
     if (name_expr == nullptr) {
       return nullptr;
@@ -346,7 +472,7 @@ namespace smasm
         break;
       }
 
-      auto statement = parse_directive(_lexer);
+      auto statement = parse_statement(_lexer);
       if (statement == nullptr) {
         std::cerr << "[parser] In body of function '" << name << "'." << std::endl;
         return nullptr;
@@ -355,7 +481,27 @@ namespace smasm
       body.push_back(statement);
     }
 
-    return expression::make<function_expression>(name, parameter_list, body);
+    return expression::make<function_expression>(name, parameter_list, body, global);
+  }
+
+  expression::ptr parser::parse_bitwise_expression (lexer& _lexer)
+  {
+    expression::ptr left = parse_additive_expression(_lexer);
+    if (left == nullptr) { return nullptr; }
+
+    while (
+      _lexer.token_at().type == token_type::ampersand ||
+      _lexer.token_at().type == token_type::pipe ||
+      _lexer.token_at().type == token_type::carat
+    ) {
+      std::string oper = _lexer.discard_token().contents;
+      expression::ptr right = parse_additive_expression(_lexer);
+      if (right == nullptr) { return nullptr; }
+
+      left = expression::make<binary_expression>(left, right, oper);
+    }
+
+    return left;
   }
 
   expression::ptr parser::parse_additive_expression (lexer& _lexer)
@@ -451,20 +597,34 @@ namespace smasm
 
   /** Primary Expression Parsing Methods **********************************************************/
 
-  expression::ptr parser::parse_primary_expression (lexer& _lexer)
+  expression::ptr parser::parse_primary_expression (lexer& _lexer, char unary)
   {
     auto token = _lexer.discard_token();
+    
     switch (token.type)
     {
+      case token_type::minus:
+        return parse_primary_expression(_lexer, '-');
       case token_type::identifier:
         return expression::make<identifier>(token.contents);
       case token_type::number:
-        return expression::make<numeric_literal>(token.get_number());
+        switch (unary)
+        {
+          case '-': return expression::make<numeric_literal>(-token.get_number());
+          case '+':
+          default: return expression::make<numeric_literal>(token.get_number());
+        }
       case token_type::hexadecimal:
       case token_type::integer:
       case token_type::octal:
-      case token_type::binary:
-        return expression::make<numeric_literal>(token.get_integer());
+      case token_type::binary: {
+        switch (unary)
+        {
+          case '-': return expression::make<numeric_literal>(-token.get_number());
+          case '+': return expression::make<numeric_literal>(-token.get_number());
+          default: return expression::make<numeric_literal>(token.get_integer());
+        }
+      } break;
       case token_type::string:
         return expression::make<string_literal>(token.contents);
       case token_type::open_paren: {
@@ -490,6 +650,48 @@ namespace smasm
         }
 
         return expression::make<address_literal>(expr);
+      } break;
+      case token_type::backtick: {
+        auto next = _lexer.discard_token();
+        if (next.type != token_type::integer)
+        {
+          std::cerr << "[parser] Expected integer after backtick in pixel literal expression."
+                    << std::endl;
+          return nullptr;
+        }
+
+        const auto& str = next.contents;
+        if (str.length() != 8)
+        {
+          std::cerr << "[parser] Contents of pixel literal must be exactly eight characters long."
+                    << std::endl;
+          return nullptr;
+        }
+
+        std::uint8_t high_byte = 0x00,
+                     low_byte = 0x00,
+                     high_bit = 0x00,
+                     low_bit = 0x00;
+
+        for (std::uint8_t char_index = 0; char_index < 8; ++char_index) {
+          std::uint8_t bit = 7 - char_index;
+
+          switch (str.at(char_index)) {
+            case '0': high_bit = 0x00; low_bit = 0x00; break;
+            case '1': high_bit = 0x00; low_bit = 0x01; break;
+            case '2': high_bit = 0x01; low_bit = 0x00; break;
+            case '3': high_bit = 0x01; low_bit = 0x01; break;
+            default:
+              std::cerr << "[parser] Invalid character '" << str.at(char_index)
+                        << "' found in pixel literal expression." << std::endl;
+              return nullptr;
+          }
+
+          low_byte  |= (low_bit  << bit);
+          high_byte |= (high_bit << bit);
+        }
+
+        return expression::make<numeric_literal>((high_byte << 8) | low_byte);
       } break;
       default:
         std::cerr <<  "[parser] Unexpected '" << token.get_string_type() << "' token = '"

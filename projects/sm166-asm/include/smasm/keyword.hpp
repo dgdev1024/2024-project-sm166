@@ -25,9 +25,14 @@ namespace smasm
     lt_byte,
     lt_word,
     lt_long,
+    lt_repeat,
+    lt_shift,
     lt_include,
+    lt_incbin,
     lt_let,
     lt_const,
+    lt_global,
+    lt_local,
     lt_function
   };
 

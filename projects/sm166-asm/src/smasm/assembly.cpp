@@ -7,7 +7,7 @@ namespace smasm
 
   assembly::assembly ()
   {
-    m_rom.resize(0x200, 0x00);
+    m_rom.resize(0x210, 0x00);
   }
 
   bool assembly::resize_rom (const std::size_t size)
@@ -28,8 +28,7 @@ namespace smasm
       std::cerr << "[assembly] Cannot write data outside of ROM mode." << std::endl;
       return false;
     } else if (m_rom_cursor >= m_rom.size()) {
-      std::cerr << "[assembly] Not enough space in allocated ROM to write data." << std::endl;
-      return false;
+      m_rom.resize(m_rom.size() + 0x80);
     }
 
     m_rom[m_rom_cursor++] = value;
@@ -50,6 +49,42 @@ namespace smasm
             write_byte((value >> 24) & 0xFF);
   }
   
+  bool assembly::include_binary (const fs::path& path)
+  {
+    const auto& absolute = fs::absolute(path).lexically_normal();
+    if (m_binary_files.contains(absolute) == true)
+    {
+      return true;
+    }
+    else
+    {
+      m_binary_files.insert(absolute);
+    }
+    
+    std::fstream file { absolute, std::ios::in | std::ios::binary };
+    if (file.is_open() == false) {
+      std::cerr << "[assembly] Could not open binary file '" << absolute 
+                << "' for reading." << std::endl;
+      return false;
+    }
+    
+    file.seekg(0, file.end);
+    auto size = file.tellg();
+    file.seekg(0, file.beg);
+    
+    std::uint8_t byte = 0;
+    while (file.good())
+    {
+      file.read(reinterpret_cast<char*>(&byte), sizeof(std::uint8_t));
+      if (write_byte(byte) == false)
+      {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
   bool assembly::save_rom (const fs::path& path)
   {
     std::fstream file { path, std::ios::out | std::ios::binary };
@@ -60,6 +95,9 @@ namespace smasm
 
     file.write(reinterpret_cast<const char*>(m_rom.data()), m_rom.size());
     file.close();
+
+    std::cout << "[assembly] Wrote " << m_rom.size() << " bytes to rom file " << path
+              << ".\n";
     return true;
   }
 

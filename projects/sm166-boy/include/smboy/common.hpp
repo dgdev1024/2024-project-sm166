@@ -36,6 +36,7 @@ namespace smboy
   
   constexpr std::uint32_t screen_width = 160;
   constexpr std::uint32_t screen_height = 144;
+  constexpr std::uint32_t screen_buffer_size = (screen_width * screen_height);
   constexpr std::uint32_t object_count = 40;
   constexpr std::uint32_t ticks_per_line = 456;
   constexpr std::uint32_t lines_per_frame = 154;

@@ -45,7 +45,8 @@ namespace sm
       // The SM166's instruction opcodes are two bytes, so advance the program counter by two places
       // after reading the opcode.
       std::uint16_t opcode = mem.read_word(m_program_counter);
-      //std::cout << "[processor] PC: " << std::hex << m_program_counter << ", OC: " << opcode << std::endl;
+      // std::cout << "[processor] PC: " << std::hex << m_program_counter 
+      //           << ", OC: " << opcode << std::endl;
       advance(2);
       
       // Examine the opcode and see which instruction needs to be executed.
@@ -853,6 +854,21 @@ namespace sm
         case 0x3371:  execute_sbc_ar32(mem, processor_register_type::l1); break;
         case 0x3372:  execute_sbc_ar32(mem, processor_register_type::l2); break;
         case 0x3373:  execute_sbc_ar32(mem, processor_register_type::l3); break;
+        
+        // 34XX. Arithmetic Instructions - 16- and 32-bit Addition
+        
+        case 0x3410:  execute_add_r16(processor_register_type::w0);       break;
+        case 0x3411:  execute_add_r16(processor_register_type::w1);       break;
+        case 0x3412:  execute_add_r16(processor_register_type::w2);       break;
+        case 0x3413:  execute_add_r16(processor_register_type::w3);       break;
+        case 0x3414:  execute_add_r16(processor_register_type::w4);       break;
+        case 0x3415:  execute_add_r16(processor_register_type::w5);       break;
+        case 0x3416:  execute_add_r16(processor_register_type::w6);       break;
+        case 0x3417:  execute_add_r16(processor_register_type::w7);       break;
+        case 0x3418:  execute_add_r32(processor_register_type::l0);       break;
+        case 0x3419:  execute_add_r32(processor_register_type::l1);       break;
+        case 0x341A:  execute_add_r32(processor_register_type::l2);       break;
+        case 0x341B:  execute_add_r32(processor_register_type::l3);       break;
 
         // 50XX. Logic Instructions - AND
 
@@ -1193,7 +1209,12 @@ namespace sm
         // Invalid Opcode
         default:
           std::cerr <<  "[processor::step] "
+                    <<  std::hex
                     <<  "Invalid operation code: " << opcode << "."
+                    <<  std::endl;
+          std::cerr <<  std::hex
+                    <<  "  At program counter: " << m_program_counter
+                    <<  std::dec
                     <<  std::endl;
           return false;
 
@@ -1300,6 +1321,7 @@ namespace sm
 
   void processor::write_register (const processor_register_type& type, std::uint32_t value)
   {
+  
     switch (type)
     {
       case processor_register_type::b0:   m_registers[0]  = (value & 0xFF); break;
@@ -2096,6 +2118,38 @@ namespace sm
     set_flag(processor_flag_type::negative,   true);
     set_flag(processor_flag_type::half_carry, low_nibble < 0);
     set_flag(processor_flag_type::carry,      new_value < 0);
+  }
+  
+  /** 34XX. Arithmetic Instructions - 16- and 32-bit Addition *************************************/
+  
+  void processor::execute_add_r16 (const processor_register_type& reg)
+  {
+    std::uint16_t amount_to_add   = read_register(reg);
+    std::uint16_t old_value       = read_register(processor_register_type::w3);
+    std::uint32_t new_value       = old_value + amount_to_add;
+    std::uint16_t low_nibbles     = (old_value & 0xFFF) + (amount_to_add & 0xFFF);
+
+    write_register(processor_register_type::w3, new_value & 0xFFFF);
+
+    set_flag(processor_flag_type::zero,       (new_value & 0xFFFF) == 0x00);
+    set_flag(processor_flag_type::negative,   false);
+    set_flag(processor_flag_type::half_carry, low_nibbles > 0xFFF);
+    set_flag(processor_flag_type::carry,      new_value > 0xFFFF);  
+  }
+  
+  void processor::execute_add_r32 (const processor_register_type& reg)
+  {
+    std::uint32_t amount_to_add   = read_register(reg);
+    std::uint32_t old_value       = read_register(processor_register_type::l3);
+    std::uint64_t new_value       = old_value + amount_to_add;
+    std::uint32_t low_nibbles     = (old_value & 0xFFFFFFF) + (amount_to_add & 0xFFFFFFF);
+
+    write_register(processor_register_type::l3, new_value & 0xFFFFFFFF);
+
+    set_flag(processor_flag_type::zero,       (new_value & 0xFFFFFFFF) == 0x00);
+    set_flag(processor_flag_type::negative,   false);
+    set_flag(processor_flag_type::half_carry, low_nibbles > 0xFFFFFFF);
+    set_flag(processor_flag_type::carry,      new_value > 0xFFFFFFFF);  
   }
 
   /** 50XX. Logical Instructions - AND ************************************************************/

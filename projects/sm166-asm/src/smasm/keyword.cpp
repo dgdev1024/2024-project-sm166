@@ -13,12 +13,16 @@ namespace smasm
     { "byte", { keyword_type::language, language_type::lt_byte } },
     { "word", { keyword_type::language, language_type::lt_word } },
     { "long", { keyword_type::language, language_type::lt_long } },
+    { "repeat", { keyword_type::language, language_type::lt_repeat } },
+    { "shift", { keyword_type::language, language_type::lt_shift } },
     { "include", { keyword_type::language, language_type::lt_include } },
+    { "incbin", { keyword_type::language, language_type::lt_incbin } },
     { "var", { keyword_type::language, language_type::lt_let } },
     { "let", { keyword_type::language, language_type::lt_let } },
     { "const", { keyword_type::language, language_type::lt_const } },
+    { "global", { keyword_type::language, language_type::lt_global } },
+    { "local", { keyword_type::language, language_type::lt_local } },
     { "function", { keyword_type::language, language_type::lt_function } },
-    { "macro", { keyword_type::language, language_type::lt_function } },
 
     // Directives
     { "size", { keyword_type::directive, directive_type::dt_size } },
@@ -82,6 +86,19 @@ namespace smasm
     { "l1", { keyword_type::cpu_register, register_type::rt_l1 } },
     { "l2", { keyword_type::cpu_register, register_type::rt_l2 } },
     { "l3", { keyword_type::cpu_register, register_type::rt_l3 } },
+    
+    // GB CPU Register Aliases
+    { "a",    { keyword_type::cpu_register, register_type::rt_b0 } },
+    { "b",    { keyword_type::cpu_register, register_type::rt_b2 } },
+    { "c",    { keyword_type::cpu_register, register_type::rt_b3 } },
+    { "d",    { keyword_type::cpu_register, register_type::rt_b4 } },
+    { "e",    { keyword_type::cpu_register, register_type::rt_b5 } },
+    { "h",    { keyword_type::cpu_register, register_type::rt_b6 } },
+    { "l",    { keyword_type::cpu_register, register_type::rt_b7 } },
+    { "bc",   { keyword_type::cpu_register, register_type::rt_w1 } },
+    { "de",   { keyword_type::cpu_register, register_type::rt_w2 } },
+    { "hl",   { keyword_type::cpu_register, register_type::rt_w3 } },
+    { "dehl", { keyword_type::cpu_register, register_type::rt_l1 } },
 
     // Instructions
     { "nop", { keyword_type::instruction, instruction_type::it_nop } },

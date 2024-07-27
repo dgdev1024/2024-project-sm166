@@ -381,6 +381,11 @@ namespace sm
     void execute_sbc_r8 (const processor_register_type& reg);
     void execute_sbc_a32 (memory& mem);
     void execute_sbc_ar32 (memory& mem, const processor_register_type& addr_reg);
+    
+  private: // 34. Arithmetic Instructions - 16-Bit and 32-Bit Addition
+  
+    void execute_add_r16 (const processor_register_type& reg);
+    void execute_add_r32 (const processor_register_type& reg);
 
   private: // 50. Logical Instructions - AND
 

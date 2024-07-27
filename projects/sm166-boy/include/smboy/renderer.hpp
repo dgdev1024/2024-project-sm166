@@ -167,7 +167,7 @@ namespace smboy
   
   // The pixel FIFO is a queue of color values which the renderer pushes into the screen buffer
   // to be displayed.
-  using pixel_fifo = std::queue<std::uint32_t>;
+  // using pixel_fifo = std::queue<std::uint32_t>;
   
   
   /**
@@ -189,7 +189,8 @@ namespace smboy
   struct pixel_fetcher
   {
     // The pixel FIFO is a queue of color values to be pushed into the screen buffer.
-    pixel_fifo        fifo;
+    std::uint32_t     fifo[32];
+    std::uint8_t      size = 0, front = 0, rear = 0;
     
     pixel_fetch_mode  mode;     // The pixel fetcher's current mode of operation.
     std::uint8_t      line_x;   // The current X coordinate on the current scanline.
@@ -245,6 +246,11 @@ namespace smboy
     void write_vram (std::uint32_t address, std::uint8_t value);
     void write_oam (std::uint32_t address, std::uint8_t value);
 
+  public: /* Screen Buffer Accesses ***************************************************************/
+
+    const std::uint32_t* get_screen_buffer () const;
+    const std::uint8_t* get_screen_bytes () const;
+
   public: /** Hardware Register Accesses **********************************************************/
   
     inline std::uint8_t read_reg_lcdc   () const  { return m_control.state; }
@@ -285,6 +291,17 @@ namespace smboy
     void write_reg_bcpd (std::uint8_t value);
     void write_reg_obpd (std::uint8_t value);
 
+  public: /* Other Getters ************************************************************************/
+
+    inline std::uint64_t get_fps () const { return m_fps; }
+    
+  public: /* Other Setters ************************************************************************/
+  
+    inline void set_vblank_function (const std::function<void(emulator&)>& fn)
+    {
+      m_on_vblank = fn;
+    }
+
   private: /** Renderer State Machine *************************************************************/
 
     void tick_horizontal_blank ();
@@ -304,7 +321,7 @@ namespace smboy
   private: /* Pixel Pipeline Methods **************************************************************/
 
     void push_color_value (std::uint32_t color_value);
-    std::uint32_t pop_color_value ();
+    void pop_color_value (std::uint32_t& color_value);
 
     std::uint32_t get_bgw_color (std::uint8_t palette_index, std::uint8_t color_index);
     std::uint32_t get_obj_color (std::uint8_t palette_index, std::uint8_t color_index);
@@ -329,13 +346,20 @@ namespace smboy
 
   private: /* Video Memory Storage ****************************************************************/
 
-    std::vector<std::uint8_t>&  m_vram;
-    std::vector<std::uint8_t>   m_vram0;
-    std::vector<std::uint8_t>   m_vram1;
-    std::vector<object>         m_oam;
-    std::vector<std::uint8_t>   m_bg_cram;
-    std::vector<std::uint8_t>   m_obj_cram;
+    // std::vector<std::uint8_t>&  m_vram;
+    // std::vector<std::uint8_t>   m_vram0;
+    // std::vector<std::uint8_t>   m_vram1;
+    std::uint8_t*               m_vram;
+    std::uint8_t                m_vram0[vram_size];
+    std::uint8_t                m_vram1[vram_size];
+    // std::vector<object>         m_oam;
+    object                      m_oam[object_count];
+    // std::vector<std::uint8_t>   m_bg_cram;
+    // std::vector<std::uint8_t>   m_obj_cram;
+    std::uint8_t                m_bg_cram[cram_size];
+    std::uint8_t                m_obj_cram[cram_size];
     // std::vector<std::uint32_t>  m_screen;
+    std::uint32_t               m_screen[screen_buffer_size];
 
   private: /* Pixel Fetcher Context ***************************************************************/
 
@@ -367,6 +391,16 @@ namespace smboy
 
     std::uint8_t  m_line_object_indices[object_count];
     std::uint8_t  m_line_object_count     = 0;
+
+  private: /* Framerate ***************************************************************************/
+
+    std::uint64_t m_current_frame = 0;
+    std::uint64_t m_fps = 0;
+    std::chrono::system_clock::time_point m_start, m_end, m_prev;
+    
+  private: /** Handler Functions ******************************************************************/
+  
+    std::function<void (emulator&)> m_on_vblank = nullptr;
 
   private: /** Emulator Handle ********************************************************************/
   

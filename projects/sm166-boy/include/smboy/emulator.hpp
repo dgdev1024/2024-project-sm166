@@ -9,6 +9,7 @@
 #include <smboy/timer.hpp>
 #include <smboy/realtime.hpp>
 #include <smboy/renderer.hpp>
+#include <smboy/joypad.hpp>
 #include <sm/processor.hpp>
 
 namespace smboy
@@ -34,6 +35,11 @@ namespace smboy
      * @brief Initializes the singleton `smboy` emulator instance.
      */
     void initialize ();
+
+    /**
+     * @brief Stops the singleton `smboy` emulator instance.
+     */
+    void stop ();
     
     /**
      * @brief Brings the `smboy` emulator through one step of execution, ticking the CPU and the
@@ -88,6 +94,9 @@ namespace smboy
     inline renderer& get_renderer () { return m_renderer; }
     inline const renderer& get_renderer () const { return m_renderer; }
     
+    inline joypad& get_joypad () { return m_joypad; }
+    inline const joypad& get_joypad () const { return m_joypad; }
+    
     /**
      * @brief Retrieves the `smboy` emulator's memory management unit (MMU).
      *
@@ -126,6 +135,8 @@ namespace smboy
     realtime m_realtime;
     
     renderer m_renderer;
+    
+    joypad m_joypad;
     
     /**
      * @brief The `smboy` emulator's memory management unit (MMU).

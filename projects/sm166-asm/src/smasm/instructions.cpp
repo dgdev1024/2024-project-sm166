@@ -40,6 +40,11 @@ namespace smasm
       return false;
     }
 
+    // if (dest_reg->is_long_register())
+    // {
+    //   std::cout << std::hex << dest_reg->get_type() << std::endl;
+    // }
+
     switch (arg_two->get_value_type())
     {
       case value_type::number: {
@@ -51,6 +56,7 @@ namespace smasm
           return  m_assembly.write_word(opcode + dest_reg->get_type()) &&
                   m_assembly.write_word(src_value->get_integer() & 0xFFFF);
         } else {
+          // std::cout << std::hex << dest_reg->get_type() << " " << src_value->get_integer() << std::endl;
           return  m_assembly.write_word(opcode + dest_reg->get_type()) &&
                   m_assembly.write_long(src_value->get_integer() & 0xFFFFFFFF);
         }
@@ -545,11 +551,10 @@ namespace smasm
 
           return m_assembly.write_word(opcode + (reg->get_type() - register_type::rt_l0));
         } else {
-          opcode += 0x10;
-          if (reg->is_byte_register() == false) {
-            std::cerr << "[instruction] Expected byte register for argument to instruction "
-                      << "'" << stmt->get_mnemonic() << " r8'" << std::endl;
-            return false;
+          if (reg->is_byte_register() == true) {
+            opcode += 0x10;
+          } else {
+            opcode += 0x200;
           }
 
           return m_assembly.write_word(opcode + reg->get_type());

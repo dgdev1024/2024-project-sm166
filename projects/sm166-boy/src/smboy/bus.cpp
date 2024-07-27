@@ -33,6 +33,16 @@ namespace smboy
       return m_emulator->get_program().read_sram(address - sram_start_addr);
     }
     
+    else if (address >= vram_start_addr && address < vram_end_addr)
+    {
+      return m_emulator->get_renderer().read_vram(address - vram_start_addr);
+    }
+    
+    else if (address >= oam_start_addr && address < oam_end_addr)
+    {
+      return m_emulator->get_renderer().read_oam(address - oam_start_addr);
+    }
+
     else if (address >= stack_start_addr && address < stack_end_addr)
     {
       return m_emulator->get_ram().read_stack(address - stack_start_addr);
@@ -68,6 +78,16 @@ namespace smboy
       m_emulator->get_program().write_sram(address - sram_start_addr, value);
     }
     
+    else if (address >= vram_start_addr && address < vram_end_addr)
+    {
+      m_emulator->get_renderer().write_vram(address - vram_start_addr, value);
+    }
+    
+    else if (address >= oam_start_addr && address < oam_end_addr)
+    {
+      m_emulator->get_renderer().write_oam(address - oam_start_addr, value);
+    }
+    
     else if (address >= stack_start_addr && address < stack_end_addr)
     {
       m_emulator->get_ram().write_stack(address - stack_start_addr, value);
@@ -97,6 +117,9 @@ namespace smboy
   std::uint8_t bus::read_io (std::uint8_t address) const
   {
     switch (address) {
+      case 0x00:  return m_emulator->get_joypad().read_reg_joyb();
+      case 0x01:  return m_emulator->get_joypad().read_reg_joyd();
+      case 0x02:  return m_emulator->get_joypad().read_reg_joyc();
       case 0x04:  return m_emulator->get_timer().read_reg_div();
       case 0x05:  return m_emulator->get_timer().read_reg_tima();
       case 0x06:  return m_emulator->get_timer().read_reg_tma();
@@ -131,6 +154,7 @@ namespace smboy
   void bus::write_io (std::uint8_t address, std::uint8_t value)
   {
     switch (address) {
+      case 0x02:  m_emulator->get_joypad().write_reg_joyc(value); break;
       case 0x04:  m_emulator->get_timer().write_reg_div(); break;
       case 0x05:  m_emulator->get_timer().write_reg_tima(value); break;
       case 0x06:  m_emulator->get_timer().write_reg_tma(value); break;

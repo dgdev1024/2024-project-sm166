@@ -60,6 +60,10 @@ namespace smasm
         return evaluate_shift_statement(
           statement_cast<shift_statement>(stmt).get(), env
         );
+      case syntax_type::if_statement:
+        return evaluate_if_statement(
+          statement_cast<if_statement>(stmt).get(), env
+        );
       case syntax_type::include_statement:
         return evaluate_include_statement(
           statement_cast<include_statement>(stmt).get(), env
@@ -355,6 +359,32 @@ namespace smasm
     return value::make<void_value>();
   }
   
+  value::ptr interpreter::evaluate_if_statement (const if_statement* stmt,
+    environment& env)
+  {
+    value::ptr clause_value = evaluate(stmt->get_clause_expr(), env);
+    if (clause_value == nullptr) { return nullptr; }
+    
+    const statement::body* target_body = &stmt->get_then_body();
+    if (clause_value->is_truthy() == false)
+    {
+      target_body = &stmt->get_else_body();
+    }
+    
+    environment scope_env { &env, environment_scope::if_statement };
+    value::ptr last_evaluated = value::make<void_value>();
+    for (const auto& body_stmt : *target_body)
+    {
+      last_evaluated = evaluate(body_stmt, scope_env);
+      if (last_evaluated == nullptr)
+      {
+        return nullptr;
+      }
+    }
+    
+    return value::make<void_value>();
+  }
+  
   value::ptr interpreter::evaluate_include_statement (const include_statement* stmt,
     environment& env)
   {
@@ -604,6 +634,26 @@ namespace smasm
         { return value::make<number_value>(left->get_integer() | right->get_integer()); }
       else if (oper == "^")  
         { return value::make<number_value>(left->get_integer() ^ right->get_integer()); }
+      else if (oper == "<<")  
+        { return value::make<number_value>(left->get_integer() << right->get_integer()); }
+      else if (oper == ">>")  
+        { return value::make<number_value>(left->get_integer() >> right->get_integer()); }
+      else if (oper == "==")  
+        { return value::make<number_value>(left->get_number() == right->get_number()); }
+      else if (oper == "!=")  
+        { return value::make<number_value>(left->get_number() != right->get_number()); }
+      else if (oper == "<=")  
+        { return value::make<number_value>(left->get_number() <= right->get_number()); }
+      else if (oper == "<")  
+        { return value::make<number_value>(left->get_number() < right->get_number()); }
+      else if (oper == ">=")  
+        { return value::make<number_value>(left->get_number() >= right->get_number()); }
+      else if (oper == ">")  
+        { return value::make<number_value>(left->get_number() > right->get_number()); }
+      else if (oper == "&&")  
+        { return value::make<number_value>(left->get_number() && right->get_number()); }
+      else if (oper == "||")  
+        { return value::make<number_value>(left->get_number() || right->get_number()); }
       
       std::cerr << "[interpreter] Invalid operation '" << oper
                 << "' encountered in number vs number binary expression."
@@ -627,6 +677,26 @@ namespace smasm
         { return value::make<address_value>(left->get_address() | right->get_address()); }
       else if (oper == "^")  
         { return value::make<address_value>(left->get_address() ^ right->get_address()); }
+      else if (oper == "<<")  
+        { return value::make<address_value>(left->get_address() << right->get_address()); }
+      else if (oper == ">>")  
+        { return value::make<address_value>(left->get_address() >> right->get_address()); }
+      else if (oper == "==")  
+        { return value::make<number_value>(left->get_address() == right->get_address()); }
+      else if (oper == "!=")  
+        { return value::make<number_value>(left->get_address() != right->get_address()); }
+      else if (oper == "<=")  
+        { return value::make<number_value>(left->get_address() <= right->get_address()); }
+      else if (oper == "<")  
+        { return value::make<number_value>(left->get_address() < right->get_address()); }
+      else if (oper == ">=")  
+        { return value::make<number_value>(left->get_address() >= right->get_address()); }
+      else if (oper == ">")  
+        { return value::make<number_value>(left->get_address() > right->get_address()); }
+      else if (oper == "&&")  
+        { return value::make<number_value>(left->get_address() && right->get_address()); }
+      else if (oper == "||")  
+        { return value::make<number_value>(left->get_address() || right->get_address()); }
       
       std::cerr << "[interpreter] Invalid operation '" << oper
                 << "' encountered in address vs address binary expression."
@@ -644,6 +714,22 @@ namespace smasm
         { return value::make<address_value>(left->get_address() + right->get_integer()); }
       else if (oper == "-")  
         { return value::make<address_value>(left->get_address() - right->get_integer()); }
+      else if (oper == "==")  
+        { return value::make<number_value>(left->get_address() == right->get_integer()); }
+      else if (oper == "!=")  
+        { return value::make<number_value>(left->get_address() != right->get_integer()); }
+      else if (oper == "<=")  
+        { return value::make<number_value>(left->get_address() <= right->get_integer()); }
+      else if (oper == "<")  
+        { return value::make<number_value>(left->get_address() < right->get_integer()); }
+      else if (oper == ">=")  
+        { return value::make<number_value>(left->get_address() >= right->get_integer()); }
+      else if (oper == ">")  
+        { return value::make<number_value>(left->get_address() > right->get_integer()); }
+      else if (oper == "&&")  
+        { return value::make<number_value>(left->get_address() && right->get_integer()); }
+      else if (oper == "||")  
+        { return value::make<number_value>(left->get_address() || right->get_integer()); }
       
       std::cerr << "[interpreter] Invalid operation '" << oper
                 << "' encountered in address vs number binary expression."
@@ -661,6 +747,10 @@ namespace smasm
       {
         return value::make<string_value>(left->get_string() + right->get_string()); 
       }
+      else if (oper == "==")  
+        { return value::make<number_value>(left->get_string() == right->get_string()); }
+      else if (oper == "!=")  
+        { return value::make<number_value>(left->get_string() != right->get_string()); }
       
       std::cerr << "[interpreter] Invalid operation '" << oper
                 << "' encountered in string vs string binary expression."

@@ -43,6 +43,8 @@ namespace smasm
       environment& env);
     value::ptr evaluate_shift_statement (const shift_statement* stmt,
       environment& env);
+    value::ptr evaluate_if_statement (const if_statement* stmt,
+      environment& env);
     value::ptr evaluate_include_statement (const include_statement* stmt,
       environment& env);
     value::ptr evaluate_incbin_statement (const incbin_statement* stmt,

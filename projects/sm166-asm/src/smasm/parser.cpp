@@ -118,11 +118,20 @@ namespace smasm
         case language_type::lt_long:    return parse_data_statement(_lexer, 4);
         case language_type::lt_repeat:  return parse_repeat_statement(_lexer);
         case language_type::lt_shift:   return parse_shift_statement(_lexer);
+        case language_type::lt_if:      return parse_if_statement(_lexer);
         case language_type::lt_include: return parse_include_statement(_lexer);
         case language_type::lt_incbin:  return parse_incbin_statement(_lexer);
         case language_type::lt_let:     return parse_variable_declaration_statement(_lexer, false);
         case language_type::lt_const:   return parse_variable_declaration_statement(_lexer, true);
         case language_type::lt_function:return parse_function_expression(_lexer);
+        case language_type::lt_else:
+          std::cerr <<  "[parser] Found 'else' statement without matching 'if' statement."
+                    <<  std::endl;
+          return nullptr;
+        case language_type::lt_break:
+          std::cerr <<  "[parser] Found 'break' statement with no loop."
+                    <<  std::endl;
+          return nullptr;
         default:
           std::cerr <<  "[parser] Un-implemented language statement: '" << lang_token.contents << "'."
                     <<  std::endl;
@@ -313,6 +322,71 @@ namespace smasm
     
     return statement::make<shift_statement>(count_expr);
   }
+  
+  statement::ptr parser::parse_if_statement (lexer& _lexer)
+  {
+    expression::ptr clause_expr = parse_expression(_lexer);
+    if (clause_expr == nullptr)
+    {
+      return nullptr;
+    }
+    
+    statement::body then_body;
+    if (_lexer.token_at().type != token_type::open_brace)
+    {
+      statement::ptr stmt = parse_statement(_lexer);
+      if (stmt == nullptr) { return nullptr; }
+      
+      then_body.push_back(stmt);
+    }
+    else
+    {
+      while (true)
+      {
+        if (_lexer.token_at().type == token_type::close_brace)
+        {
+          break;
+        }
+        
+        statement::ptr stmt = parse_statement(_lexer);
+        if (stmt == nullptr) { return nullptr; }
+        
+        then_body.push_back(stmt);
+      }
+    }
+    
+    statement::body else_body;
+    auto kw = _lexer.token_at().get_keyword();
+    if (kw.type == keyword_type::language && kw.param_one == language_type::lt_else)
+    {
+      _lexer.discard_token();
+      
+      if (_lexer.token_at().type != token_type::open_brace)
+      {
+        statement::ptr stmt = parse_statement(_lexer);
+        if (stmt == nullptr) { return nullptr; }
+        
+        else_body.push_back(stmt);
+      }
+      else
+      {
+        while (true)
+        {
+          if (_lexer.token_at().type == token_type::close_brace)
+          {
+            break;
+          }
+          
+          statement::ptr stmt = parse_statement(_lexer);
+          if (stmt == nullptr) { return nullptr; }
+          
+          else_body.push_back(stmt);
+        }
+      }
+    }
+    
+    return statement::make<if_statement>(clause_expr, then_body, else_body);
+  }
 
   statement::ptr parser::parse_include_statement (lexer& _lexer)
   {
@@ -393,7 +467,7 @@ namespace smasm
       }
     }
 
-    return parse_bitwise_expression(_lexer);
+    return parse_conditional_expression(_lexer);
   }
 
   expression::ptr parser::parse_function_expression (lexer& _lexer)
@@ -484,6 +558,31 @@ namespace smasm
     return expression::make<function_expression>(name, parameter_list, body, global);
   }
 
+  expression::ptr parser::parse_conditional_expression (lexer& _lexer)
+  {
+    expression::ptr left = parse_bitwise_expression(_lexer);
+    if (left == nullptr) { return nullptr; }
+
+    while (
+      _lexer.token_at().type == token_type::double_ampersand ||
+      _lexer.token_at().type == token_type::double_pipe ||
+      _lexer.token_at().type == token_type::double_equals ||
+      _lexer.token_at().type == token_type::not_equals ||
+      _lexer.token_at().type == token_type::greater_equals ||
+      _lexer.token_at().type == token_type::less_equals ||
+      _lexer.token_at().type == token_type::open_arrow ||
+      _lexer.token_at().type == token_type::close_arrow
+    ) {
+      std::string oper = _lexer.discard_token().contents;
+      expression::ptr right = parse_bitwise_expression(_lexer);
+      if (right == nullptr) { return nullptr; }
+
+      left = expression::make<binary_expression>(left, right, oper);
+    }
+
+    return left;    
+  }
+  
   expression::ptr parser::parse_bitwise_expression (lexer& _lexer)
   {
     expression::ptr left = parse_additive_expression(_lexer);
@@ -492,7 +591,9 @@ namespace smasm
     while (
       _lexer.token_at().type == token_type::ampersand ||
       _lexer.token_at().type == token_type::pipe ||
-      _lexer.token_at().type == token_type::carat
+      _lexer.token_at().type == token_type::carat ||
+      _lexer.token_at().type == token_type::left_shift ||
+      _lexer.token_at().type == token_type::right_shift
     ) {
       std::string oper = _lexer.discard_token().contents;
       expression::ptr right = parse_additive_expression(_lexer);

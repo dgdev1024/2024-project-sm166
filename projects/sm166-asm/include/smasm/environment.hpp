@@ -11,7 +11,8 @@ namespace smasm
   {
     parent,
     function,
-    repeat
+    repeat,
+    if_statement
   };
 
   class environment
@@ -25,6 +26,10 @@ namespace smasm
     value::ptr resolve_variable (const std::string& key) const;
     environment* get_function_scope ();
     bool shift_arguments (const std::uint64_t count);
+    
+  public:
+    value::ptr operator[] (const std::string& key) const;
+    value::ptr operator[] (const std::uint64_t index) const;
 
   private:
     void create_global_env ();

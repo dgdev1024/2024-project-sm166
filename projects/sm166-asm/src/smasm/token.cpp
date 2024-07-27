@@ -27,6 +27,7 @@ namespace smasm
       case token_type::backtick: return "backtick";
       case token_type::question: return "question";
       case token_type::exclaim: return "exclaim";
+      case token_type::not_equals: return "not equals";
       case token_type::period: return "period";
       case token_type::comma: return "comma";
       case token_type::colon: return "colon";
@@ -37,10 +38,15 @@ namespace smasm
       case token_type::percent: return "percent";
       case token_type::carat: return "carat";
       case token_type::pipe: return "pipe";
+      case token_type::double_pipe: return "or";
       case token_type::ampersand: return "ampersand";
+      case token_type::double_ampersand: return "and";
       case token_type::asterisk: return "asterisk";
       case token_type::plus: return "plus";
       case token_type::equals: return "equals";
+      case token_type::double_equals: return "double equals";
+      case token_type::greater_equals: return "greater equals";
+      case token_type::less_equals: return "less equals";
       case token_type::minus: return "minus";
       case token_type::backslash: return "backslash";
       case token_type::slash: return "slash";
@@ -52,6 +58,8 @@ namespace smasm
       case token_type::close_brace: return "close brace";
       case token_type::open_arrow: return "open arrow";
       case token_type::close_arrow: return "close arrow";
+      case token_type::left_shift: return "left shift";
+      case token_type::right_shift: return "right shift";
       case token_type::new_line: return "new line";
       case token_type::end_of_file: return "end of file";
       default: return "unknown";

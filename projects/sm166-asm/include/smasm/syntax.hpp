@@ -23,6 +23,7 @@ namespace smasm
     incbin_statement,
     repeat_statement,
     shift_statement,
+    if_statement,
     instruction_statement,
 
     address_literal,
@@ -450,6 +451,66 @@ namespace smasm
   private:
     expression::ptr m_count_expr = nullptr;
   
+  };
+  
+  class if_statement : public statement
+  {
+  public:
+    inline if_statement (
+      const expression::ptr& clause_expr,
+      const statement::body& then_body,
+      const statement::body& else_body
+    ) :
+      statement { syntax_type::if_statement },
+      m_clause_expr { clause_expr },
+      m_then_body { then_body },
+      m_else_body { else_body }
+    {}
+    
+  public:
+    inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+    {
+      os << indent(i) << "if statement {\n";
+      {
+        if (m_clause_expr != nullptr)
+        {
+          os << indent(i + 2) << "clause\n";
+          m_clause_expr->dump(os, i + 4);
+        }
+        
+        if (m_then_body.empty() == false)
+        {
+          os << indent(i + 2) << "then {\n";
+          for (const auto& stmt : m_then_body)
+          {
+            stmt->dump(os, i + 4);
+          }
+          os << indent(i + 2) << "}\n";
+        }
+        
+        if (m_else_body.empty() == false)
+        {
+          os << indent(i + 2) << "else {\n";
+          for (const auto& stmt : m_else_body)
+          {
+            stmt->dump(os, i + 4);
+          }
+          os << indent(i + 2) << "}\n";
+        }
+      }
+      os << indent(i) << "}\n";
+    }
+  
+  public:
+    inline const expression::ptr& get_clause_expr () const { return m_clause_expr; }
+    inline const statement::body& get_then_body () const { return m_then_body; }
+    inline const statement::body& get_else_body () const { return m_else_body; }
+  
+  private:
+    expression::ptr m_clause_expr = nullptr;
+    statement::body m_then_body;
+    statement::body m_else_body;
+    
   };
 
   class include_statement : public statement

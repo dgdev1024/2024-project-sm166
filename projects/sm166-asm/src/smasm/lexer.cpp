@@ -252,7 +252,15 @@ namespace smasm
     }
 
     m_file.unget();
-    if (contents == "") { smasm_emplace(token_type::ampersand, "&"); }
+    if (contents == "") { 
+      std::int32_t next_character = m_file.get();
+      if (next_character == '&') {
+        smasm_emplace(token_type::double_ampersand, "&&");
+      } else {
+        m_file.unget();
+        smasm_emplace(token_type::ampersand, "&"); 
+      }
+    }
     else { smasm_emplace(token_type::octal, contents); }
     
     return 1;
@@ -269,18 +277,48 @@ namespace smasm
     {
       case '`':  type =    token_type::backtick; break;
       case '?':  type =    token_type::question; break;
-      case '!':  type =    token_type::exclaim; break;
+      case '!': {
+        std::int32_t next_character = m_file.get();
+        if (next_character == '=') {
+          smasm_emplace(token_type::not_equals, "!=");
+          return 1;
+        } else {
+          m_file.unget();
+          smasm_emplace(token_type::exclaim, "!");
+          return 1;
+        }
+      } break;
       case '.':  type =    token_type::period; break;
       case ',':  type =    token_type::comma; break;
       case ':':  type =    token_type::colon; break;
       case '@':  type =    token_type::at; break;
       case '#':  type =    token_type::pound; break;
       case '^':  type =    token_type::carat; break;
-      case '|':  type =    token_type::pipe; break;
+      case '|': {
+        std::int32_t next_character = m_file.get();
+        if (next_character == '|') {
+          smasm_emplace(token_type::double_pipe, "||");
+          return 1;
+        } else {
+          m_file.unget();
+          smasm_emplace(token_type::pipe, "|"); 
+          return 1;
+        }
+      } break;
       case '*':  type =    token_type::asterisk; break;
       case '+':  type =    token_type::plus; break;
       case '-':  type =    token_type::minus; break;
-      case '=':  type =    token_type::equals; break;
+      case '=': {
+        std::int32_t next_character = m_file.get();
+        if (next_character == '=') {
+          smasm_emplace(token_type::double_equals, "==");
+          return 1;
+        } else {
+          m_file.unget();
+          smasm_emplace(token_type::equals, "=");
+          return 1;
+        }
+      } break;
       case '/':  type =    token_type::slash; break;
       case '\\': type =    token_type::backslash; break;
       case '(':  type =    token_type::open_paren; break;
@@ -289,8 +327,34 @@ namespace smasm
       case ']':  type =    token_type::close_bracket; break;
       case '{':  type =    token_type::open_brace; break;
       case '}':  type =    token_type::close_brace; break;
-      case '<':  type =    token_type::open_arrow; break;
-      case '>':  type =    token_type::close_arrow; break;
+      case '<': {
+        std::int32_t next_character = m_file.get();
+        if (next_character == '=') {
+          smasm_emplace(token_type::less_equals, "<=");
+          return 1;
+        } else if (next_character == '<') {
+          smasm_emplace(token_type::left_shift, "<<");
+          return 1;
+        } else {
+          m_file.unget();
+          smasm_emplace(token_type::open_arrow, "<");
+          return 1;
+        }
+      } break;
+      case '>': {
+        std::int32_t next_character = m_file.get();
+        if (next_character == '=') {
+          smasm_emplace(token_type::greater_equals, ">=");
+          return 1;
+        } else if (next_character == '>') {
+          smasm_emplace(token_type::right_shift, ">>");
+          return 1;
+        } else {
+          m_file.unget();
+          smasm_emplace(token_type::close_arrow, ">");
+          return 1;
+        }
+      } break;
       default:
         std::cerr << "[lexer] "
                   << "Unexpected character '" << static_cast<char>(character) << "'."

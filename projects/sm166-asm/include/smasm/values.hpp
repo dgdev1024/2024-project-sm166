@@ -43,6 +43,7 @@ namespace smasm
 
   public:
     inline value_type get_value_type () const { return m_value_type; }
+    inline virtual bool is_truthy () const { return false; }
 
   protected:
     value_type m_value_type;
@@ -66,6 +67,9 @@ namespace smasm
     inline void_value () :
       value { value_type::none }
     {}
+    
+  public:
+    inline virtual bool is_truthy () const override { return false; }
 
   };
 
@@ -91,6 +95,7 @@ namespace smasm
       { return m_type >= register_type::rt_l0; }
     inline bool is_address_pointer () const
       { return m_is_address_ptr; }
+    inline virtual bool is_truthy () const override { return true; }
 
   private:
     register_type m_type;
@@ -110,6 +115,7 @@ namespace smasm
 
   public:
     inline condition_type get_type () const { return m_type; }
+    inline virtual bool is_truthy () const override { return true; }
 
   private:
     condition_type m_type;
@@ -128,6 +134,7 @@ namespace smasm
 
   public:
     inline std::uint32_t get_address () const { return m_address; }
+    inline virtual bool is_truthy () const override { return (m_address != 0); }
 
   private:
     std::uint32_t m_address = 0;
@@ -147,6 +154,7 @@ namespace smasm
   public:
     inline double get_number () const { return m_value; }
     inline std::uint64_t get_integer () const { return static_cast<std::uint64_t>(m_value); }
+    inline virtual bool is_truthy () const override { return (m_value != 0.0); }
 
   private:
     double m_value = 0.0;
@@ -165,6 +173,7 @@ namespace smasm
 
   public:
     inline const std::string& get_string () const { return m_value; }
+    inline virtual bool is_truthy () const override { return (m_value != ""); }
 
   private:
     std::string m_value = "";
@@ -209,6 +218,7 @@ namespace smasm
     inline const statement::body& get_body () const { return m_body; }
     inline const native& get_native () const { return m_native; }
     inline bool is_native () const { return m_native != nullptr; }
+    inline virtual bool is_truthy () const override { return true; }
 
   private:
     std::string m_name = "";

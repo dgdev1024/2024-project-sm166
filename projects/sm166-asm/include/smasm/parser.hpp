@@ -25,6 +25,7 @@ namespace smasm
     statement::ptr  parse_data_statement (lexer& _lexer, int size);
     statement::ptr  parse_repeat_statement (lexer& _lexer);
     statement::ptr  parse_shift_statement (lexer& _lexer);
+    statement::ptr  parse_if_statement (lexer& _lexer);
     statement::ptr  parse_include_statement (lexer& _lexer);
     statement::ptr  parse_incbin_statement (lexer& _lexer);
     statement::ptr  parse_instruction_statement (lexer& _lexer);
@@ -32,6 +33,7 @@ namespace smasm
   private:
     expression::ptr parse_expression (lexer& _lexer);
     expression::ptr parse_function_expression (lexer& _lexer);
+    expression::ptr parse_conditional_expression (lexer& _lexer);
     expression::ptr parse_bitwise_expression (lexer& _lexer);
     expression::ptr parse_multiplicitive_expression (lexer& _lexer);
     expression::ptr parse_additive_expression (lexer& _lexer);

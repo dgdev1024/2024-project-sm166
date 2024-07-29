@@ -145,6 +145,10 @@ namespace smboy
       case 0x1C:  return m_emulator->get_audio().read_reg_nr32();
       case 0x1D:  return m_emulator->get_audio().read_reg_nr33();
       case 0x1E:  return m_emulator->get_audio().read_reg_nr34();
+      case 0x20:  return m_emulator->get_audio().read_reg_nr41();
+      case 0x21:  return m_emulator->get_audio().read_reg_nr42();
+      case 0x22:  return m_emulator->get_audio().read_reg_nr43();
+      case 0x23:  return m_emulator->get_audio().read_reg_nr44();
       case 0x24:  return m_emulator->get_audio().read_reg_nr50();
       case 0x25:  return m_emulator->get_audio().read_reg_nr51();
       case 0x26:  return m_emulator->get_audio().read_reg_nr52();
@@ -208,6 +212,10 @@ namespace smboy
       case 0x1C:  m_emulator->get_audio().write_reg_nr32(value); break;
       case 0x1D:  m_emulator->get_audio().write_reg_nr33(value); break;
       case 0x1E:  m_emulator->get_audio().write_reg_nr34(value); break;
+      case 0x20:  m_emulator->get_audio().write_reg_nr41(value); break;
+      case 0x21:  m_emulator->get_audio().write_reg_nr42(value); break;
+      case 0x22:  m_emulator->get_audio().write_reg_nr43(value); break;
+      case 0x23:  m_emulator->get_audio().write_reg_nr44(value); break;
       case 0x24:  m_emulator->get_audio().write_reg_nr50(value); break;
       case 0x25:  m_emulator->get_audio().write_reg_nr51(value); break;
       case 0x26:  m_emulator->get_audio().write_reg_nr52(value); break;

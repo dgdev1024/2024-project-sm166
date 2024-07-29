@@ -59,6 +59,12 @@ namespace smboy
 
   /** Common Channel Properties *******************************************************************/
   
+  enum audio_envelope_direction
+  {
+    aed_decrease = 0,
+    aed_increase = 1
+  };
+
   union audio_phc_control
   {
     struct
@@ -84,6 +90,12 @@ namespace smboy
 
   /** Pulse Channel Properties ********************************************************************/
   
+  enum pulse_sweep_direction
+  {
+    psd_increase = 0,
+    psd_decrease = 1
+  };
+
   union pulse_sweep_control
   {
     struct
@@ -146,6 +158,19 @@ namespace smboy
 
   using noise_ve_control = audio_ve_control;
 
+  union noise_lfsr_control
+  {
+    struct
+    {
+      std::uint8_t  divider     : 3;
+      std::uint8_t  width       : 1;
+      std::uint8_t  clock_shift : 4;
+    };
+    std::uint8_t state;
+  };
+
+  using noise_phc_control = audio_phc_control;
+
   /** Channel Structures **************************************************************************/
   
   struct pulse_channel
@@ -156,7 +181,18 @@ namespace smboy
     std::uint8_t        plc;
     pulse_phc_control   phc;
 
-    inline std::uint16_t get_period () const
+    bool                dac_enable = false;
+    std::uint8_t        dac_input = 0;
+    float               dac_output = 0.0f;
+    std::uint8_t        length_timer = 0;
+    std::uint8_t        current_volume = 0;
+    std::uint16_t       current_period = 0;
+    std::uint16_t       period_divider = 0;
+    std::uint8_t        frequency_sweep_ticks = 0;
+    std::uint8_t        envelope_sweep_ticks = 0;
+    std::uint8_t        wave_pointer = 0;
+
+    inline std::uint16_t get_initial_period () const
     {
       return (plc | (phc.period_high << 8));
     }
@@ -171,7 +207,15 @@ namespace smboy
     wave_phc_control    phc;
     std::uint8_t        ram[wave_ram_size];
 
-    inline std::uint16_t get_period () const
+    bool                dac_enable = false;
+    std::uint8_t        dac_input = 0;
+    float               dac_output = 0.0f;
+    std::uint8_t        length_timer = 0;
+    std::uint8_t        sample_index = 0;
+    std::uint16_t       current_period = 0;
+    std::uint16_t       period_divider = 0;
+
+    inline std::uint16_t get_initial_period () const
     {
       return (plc | (phc.period_high << 8));
     }
@@ -198,9 +242,31 @@ namespace smboy
 
   struct noise_channel
   {
-    noise_lt_control  ltc;
+    noise_lt_control    ltc;
+    noise_ve_control    vec;
+    noise_lfsr_control  lfsr;
+    noise_phc_control   phc;
+
+    bool                dac_enable = false;
+    std::uint8_t        dac_input = 0;
+    float               dac_output = 0.0f;
+    std::uint16_t       lfsr_state = 0;
+    std::uint8_t        length_timer = 0;
+    std::uint8_t        current_volume = 0;
+    std::uint8_t        envelope_sweep_ticks = 0;
+    std::uint64_t       clock_frequency = 0;
   };
+
+  /** Audio Sample Structure **********************************************************************/
   
+  struct audio_sample
+  {
+    std::uint8_t  left_input = 0;
+    std::uint8_t  right_input = 0;
+    float         left_output = 0.0f;
+    float         right_output = 0.0f;
+  };
+
   /** Audio Context Class *************************************************************************/
   
   class audio
@@ -209,7 +275,8 @@ namespace smboy
   public:  /** Public Methods *********************************************************************/
     
     void initialize (emulator* _emulator);
-    void tick (bool needs_update);
+    void tick (const std::uint64_t& cycle_count, bool needs_update);
+    audio_sample get_sample () const;
     
   public:  /** Register Reads *********************************************************************/
     inline std::uint8_t read_reg_nr10 () const { return m_pc1.psc.state; }
@@ -226,6 +293,10 @@ namespace smboy
     inline std::uint8_t read_reg_nr32 () const { return m_wc.olc.state; }
     inline std::uint8_t read_reg_nr33 () const { return m_wc.plc; }
     inline std::uint8_t read_reg_nr34 () const { return m_wc.phc.state & 0b00111111; }
+    inline std::uint8_t read_reg_nr41 () const { return m_nc.ltc.state; }
+    inline std::uint8_t read_reg_nr42 () const { return m_nc.vec.state; }
+    inline std::uint8_t read_reg_nr43 () const { return m_nc.lfsr.state; }
+    inline std::uint8_t read_reg_nr44 () const { return m_nc.phc.state; }
     inline std::uint8_t read_reg_nr50 () const { return m_volume.state; }
     inline std::uint8_t read_reg_nr51 () const { return m_panning.state; }
     inline std::uint8_t read_reg_nr52 () const { return m_control.state; }
@@ -239,6 +310,7 @@ namespace smboy
     inline void write_reg_nr31 (std::uint8_t value) { m_wc.ilt = value; }
     inline void write_reg_nr32 (std::uint8_t value) { m_wc.olc.state = value; }
     inline void write_reg_nr33 (std::uint8_t value) { m_wc.plc = value; }
+    inline void write_reg_nr41 (std::uint8_t value) { m_nc.ltc.state = value; }
     inline void write_reg_nr50 (std::uint8_t value) { m_volume.state = value; }
     inline void write_reg_nr51 (std::uint8_t value) { m_panning.state = value; }
     inline void write_reg_nr52 (std::uint8_t value) { m_control.state |= (value & 0b11110000); }
@@ -250,6 +322,9 @@ namespace smboy
     void write_reg_nr24 (std::uint8_t value);
     void write_reg_nr30 (std::uint8_t value);
     void write_reg_nr34 (std::uint8_t value);
+    void write_reg_nr42 (std::uint8_t value);
+    void write_reg_nr43 (std::uint8_t value);
+    void write_reg_nr44 (std::uint8_t value);
 
   public:  /** General Getters ********************************************************************/
   
@@ -262,6 +337,28 @@ namespace smboy
     inline noise_channel& get_nc () { return m_nc; }
     inline const noise_channel& get_nc () const { return m_nc; }
 
+  public:  /** General Setters ********************************************************************/
+
+    inline void set_mix_clock (std::uint32_t frequency)
+    {
+      if (frequency == 0) { frequency = 44100; }
+      m_mix_clock = 4194304 / frequency;
+    }
+
+    inline void set_mix_function
+      (const std::function<void(const audio_sample&)>& on_mix)
+    {
+      m_on_mix = on_mix;
+    }
+
+  private: /** Ticking Methods ********************************************************************/
+    void tick_length_timers ();
+    void tick_frequency_sweep ();
+    void tick_envelope_sweep ();
+    void tick_wave_period_divider ();
+    void tick_pulse_period_dividers ();
+    void tick_noise_divider ();
+
   private: /** Hardware Registers *****************************************************************/
     pulse_channel m_pc1;
     pulse_channel m_pc2;
@@ -270,7 +367,12 @@ namespace smboy
     audio_control m_control;
     audio_panning m_panning;
     master_volume m_volume;
-  
+
+  private: /** Other Members **********************************************************************/
+    std::uint16_t m_divider = 0;
+    std::uint64_t m_mix_clock = 0;
+    std::function<void(const audio_sample&)> m_on_mix = nullptr;
+
   private: /** Emulator Handle ********************************************************************/
     emulator* m_emulator = nullptr;
   

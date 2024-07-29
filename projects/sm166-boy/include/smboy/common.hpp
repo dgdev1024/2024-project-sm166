@@ -11,6 +11,7 @@
 #include <chrono>
 #include <thread>
 #include <ctime>
+#include <cmath>
 #include <sm/common.hpp>
 
 namespace fs = std::filesystem;
@@ -44,6 +45,7 @@ namespace smboy
   constexpr std::uint32_t bytes_per_palette = 8;
   constexpr std::uint32_t cram_size = 128;
   constexpr std::uint32_t wave_ram_size = 16;
+  constexpr std::uint32_t wave_ram_nibble_size = 32;
   
   enum interrupt_type
   {

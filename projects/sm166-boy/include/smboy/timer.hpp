@@ -56,6 +56,9 @@ namespace smboy
     inline void write_reg_tma (std::uint8_t value) { m_modulo = value; }
     inline void write_reg_tac (std::uint8_t value) { m_control.state = value; }
 
+  public:
+    inline std::uint16_t get_full_divider () const { return m_divider; }
+
   private:
 
     emulator*       m_emulator = nullptr;

@@ -9,6 +9,10 @@ namespace smboy
   void timer::initialize (emulator* _emulator)
   {
     m_emulator = _emulator;
+    m_divider = 0x0000;
+    m_counter = 0x00;
+    m_modulo = 0x00;
+    m_control.state = 0xF8;
   }
 
   void timer::tick ()

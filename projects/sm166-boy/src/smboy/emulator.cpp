@@ -50,7 +50,7 @@ namespace smboy
     m_timer.tick();
     m_realtime.tick();
     m_renderer.tick(cycle_count);
-    m_audio.tick(m_timer.audio_needs_update());
+    m_audio.tick(cycle_count, m_timer.audio_needs_update());
   }
 
 }

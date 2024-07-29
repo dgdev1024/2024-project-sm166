@@ -3,6 +3,64 @@
 #include <stdafx.hpp>
 #include <arguments.hpp>
 
+class AudioStream : public sf::SoundStream
+{
+public:
+  static constexpr std::uint32_t SAMPLE_RATE = 44100;
+
+public:
+  AudioStream ()
+  {
+    initialize(2, SAMPLE_RATE);
+  }
+
+public:
+  void pushSample (float left, float right)
+  {
+    if (left == 0 && right == 0)
+    {
+      return;
+    }
+
+    if (m_sampleCount + 2 < SAMPLE_RATE)
+    {
+      if (left  < -1.0f) { left  = -1.0f; } else if (left  > 1.0f) { left  = 1.0f; }
+      if (right < -1.0f) { right = -1.0f; } else if (right > 1.0f) { right = 1.0f; }
+
+      m_samples[m_sampleCount++] = (std::uint16_t) (left  * 32767);
+      m_samples[m_sampleCount++] = (std::uint16_t) (right * 32767);
+    }
+  }
+
+protected:
+  virtual bool onGetData (sf::SoundStream::Chunk& data) override
+  {
+    std::lock_guard<std::mutex> lock { m_mutex };
+    std::this_thread::sleep_for(std::chrono::milliseconds(16));
+    if (m_sampleCount == 0)
+    {
+      return false;
+    }
+
+    data.samples = m_samples;
+    data.sampleCount = m_sampleCount;
+    m_sampleCount = 0;
+
+    return true;
+  }
+
+  virtual void onSeek (sf::Time) override
+  {
+
+  }
+
+private:
+  std::mutex m_mutex;
+  std::size_t m_sampleCount = 0;
+  std::int16_t m_samples[SAMPLE_RATE];
+
+};
+
 void run_emulation_thread (smboy::emulator& emu)
 {
   while (emu.is_running() == true)
@@ -37,11 +95,20 @@ int main (int argc, char** argv)
   {
     return 1;
   }
+
+  // Create the audio stream.
+  AudioStream stream;
     
   // Get handles to the emulator's renderer and joypad context.
   auto& renderer = emulator.get_renderer();
   auto& joypad = emulator.get_joypad();
+  auto& audio = emulator.get_audio();
 
+  audio.set_mix_clock(44100.0f);
+  audio.set_mix_function([&] (const smboy::audio_sample& sample)
+  {
+    stream.pushSample(sample.left_output, sample.right_output);
+  });
 
   if (smboy::arguments::has("headless", 'h') == false)
   {
@@ -66,6 +133,9 @@ int main (int argc, char** argv)
     tpsText.setFont(font);
     tpsText.setCharacterSize(20);
     tpsText.setFillColor(sf::Color::Red);
+
+    // Start the audio stream.
+    stream.play();
 
     // Loop as long as the window is open and the emulator is running.
     while (window.isOpen() && emulator.is_running())
@@ -135,6 +205,7 @@ int main (int argc, char** argv)
       window.display();
     }
     
+    stream.stop();
     emulation_thread.join();
     
   }

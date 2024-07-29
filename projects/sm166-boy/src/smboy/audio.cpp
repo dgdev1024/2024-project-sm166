@@ -68,8 +68,18 @@ namespace smboy
   
   void audio::write_reg_nr30 (std::uint8_t value)
   {
-    m_wc.dac_enable = value;
+    m_wc.dac = value;
     if ((m_wc.dac & 0b10000000) == 0)
+    {
+    
+    }
+  }
+
+  void audio::write_reg_nr34 (std::uint8_t value)
+  {
+    m_wc.phc.state = value;
+    
+    if ((m_wc.phc.state & 0b10000000) == 1)
     {
     
     }

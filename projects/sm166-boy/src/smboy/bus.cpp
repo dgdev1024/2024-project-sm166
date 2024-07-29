@@ -142,9 +142,28 @@ namespace smboy
       case 0x19:  return m_emulator->get_audio().read_reg_nr24();
       case 0x1A:  return m_emulator->get_audio().read_reg_nr30();
       case 0x1B:  return m_emulator->get_audio().read_reg_nr31();
+      case 0x1C:  return m_emulator->get_audio().read_reg_nr32();
+      case 0x1D:  return m_emulator->get_audio().read_reg_nr33();
+      case 0x1E:  return m_emulator->get_audio().read_reg_nr34();
       case 0x24:  return m_emulator->get_audio().read_reg_nr50();
       case 0x25:  return m_emulator->get_audio().read_reg_nr51();
       case 0x26:  return m_emulator->get_audio().read_reg_nr52();
+      case 0x30:
+      case 0x31:
+      case 0x32:
+      case 0x33:
+      case 0x34:
+      case 0x35:
+      case 0x36:
+      case 0x37:
+      case 0x38:
+      case 0x39:
+      case 0x3A:
+      case 0x3B:
+      case 0x3C:
+      case 0x3D:
+      case 0x3E:
+      case 0x3F:  return m_emulator->get_audio().get_wc().read_wave_ram(address - 0x30);
       case 0x40:  return m_emulator->get_renderer().read_reg_lcdc();
       case 0x41:  return m_emulator->get_renderer().read_reg_stat();
       case 0x42:  return m_emulator->get_renderer().read_reg_scy();
@@ -186,9 +205,28 @@ namespace smboy
       case 0x19:  m_emulator->get_audio().write_reg_nr24(value); break;
       case 0x1A:  m_emulator->get_audio().write_reg_nr30(value); break;
       case 0x1B:  m_emulator->get_audio().write_reg_nr31(value); break;
+      case 0x1C:  m_emulator->get_audio().write_reg_nr32(value); break;
+      case 0x1D:  m_emulator->get_audio().write_reg_nr33(value); break;
+      case 0x1E:  m_emulator->get_audio().write_reg_nr34(value); break;
       case 0x24:  m_emulator->get_audio().write_reg_nr50(value); break;
       case 0x25:  m_emulator->get_audio().write_reg_nr51(value); break;
       case 0x26:  m_emulator->get_audio().write_reg_nr52(value); break;
+      case 0x30:
+      case 0x31:
+      case 0x32:
+      case 0x33:
+      case 0x34:
+      case 0x35:
+      case 0x36:
+      case 0x37:
+      case 0x38:
+      case 0x39:
+      case 0x3A:
+      case 0x3B:
+      case 0x3C:
+      case 0x3D:
+      case 0x3E:
+      case 0x3F:  m_emulator->get_audio().get_wc().write_wave_ram(address - 0x30, value); break;
       case 0x40:  m_emulator->get_renderer().write_reg_lcdc(value); break;
       case 0x41:  m_emulator->get_renderer().write_reg_stat(value); break;
       case 0x42:  m_emulator->get_renderer().write_reg_scy(value); break;

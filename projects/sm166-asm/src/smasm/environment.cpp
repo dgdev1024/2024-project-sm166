@@ -35,7 +35,6 @@ namespace smasm
     if (constant == true) {
       m_constants.insert(key);
     }
-    
 
     return true;
   }

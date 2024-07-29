@@ -24,6 +24,9 @@ namespace smasm
     repeat_statement,
     shift_statement,
     if_statement,
+    charmap_statement,
+    newcharmap_statement,
+    setcharmap_statement,
     instruction_statement,
 
     address_literal,
@@ -291,17 +294,19 @@ namespace smasm
   public:
     data_statement (
       const expression::array& array,
-      int size = 1
+      int size = 1,
+      bool offset = false
     ) :
       statement { syntax_type::data_statement },
       m_array { array },
-      m_size { size }
+      m_size { size },
+      m_offset { offset }
     {}
 
   public:
     inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
     {
-      os << indent(i) << "data statement";
+      os << indent(i) << ((m_offset == true) ? "offset" : "data") << " statement";
 
       switch (m_size) {
         case 1: os << ": byte"; break;
@@ -322,11 +327,118 @@ namespace smasm
     inline bool is_byte () const { return m_size == 1; }
     inline bool is_word () const { return m_size == 2; }
     inline bool is_long () const { return m_size == 4; }
+    inline bool is_offset () const { return m_offset; }
 
   private:
     expression::array m_array;
     int m_size = 0;
+    bool m_offset = false;
 
+  };
+  
+  class charmap_statement : public statement
+  {
+  public:
+    inline charmap_statement (
+      const expression::ptr& char_expr,
+      const expression::ptr& map_expr
+    ) :
+      statement { syntax_type::charmap_statement },
+      m_char_expr { char_expr },
+      m_map_expr { map_expr }
+    {}
+  
+  public:
+    inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+    {
+      os << indent(i) << "charmap statement {\n";
+      {
+        if (m_char_expr != nullptr) {
+          os << indent(i + 2) << "chars {\n";
+          m_char_expr->dump(os, i + 4);
+          os << indent(i + 2) << "}\n";
+        }
+        if (m_map_expr != nullptr) {
+          os << indent(i + 2) << "mapping {\n";
+          m_map_expr->dump(os, i + 4);
+          os << indent(i + 2) << "}\n";
+        }
+      }
+      os << indent(i) << "}\n";
+    }
+  
+  public:
+    inline const expression::ptr& get_char_expr () const { return m_char_expr; }
+    inline const expression::ptr& get_map_expr () const { return m_map_expr; }
+  
+  private:
+    expression::ptr m_char_expr = nullptr;
+    expression::ptr m_map_expr = nullptr;
+    
+  };
+  
+  class newcharmap_statement : public statement
+  {
+  public:
+    inline newcharmap_statement (
+      const expression::ptr& name_expr
+    ) :
+      statement { syntax_type::newcharmap_statement },
+      m_name_expr { name_expr }
+    {}
+  
+  public:
+    inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+    {
+      os << indent(i) << "newcharmap statement {\n";
+      {
+        if (m_name_expr != nullptr) {
+          os << indent(i + 2) << "name {\n";
+          m_name_expr->dump(os, i + 4);
+          os << indent(i + 2) << "}\n";
+        }
+      }
+      os << indent(i) << "}\n";
+    }
+    
+  public:
+    inline const expression::ptr& get_name_expr () const { return m_name_expr; }
+  
+  private:
+    expression::ptr m_name_expr = nullptr;
+    
+  };
+  
+  class setcharmap_statement : public statement
+  {
+  public:
+    inline setcharmap_statement (
+      const expression::ptr& name_expr
+    ) :
+      statement { syntax_type::setcharmap_statement },
+      m_name_expr { name_expr }
+    {}
+  
+  public:
+    inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+    {
+      os << indent(i) << "setcharmap statement {\n";
+      {
+        if (m_name_expr != nullptr) {
+          os << indent(i + 2) << "name {\n";
+          m_name_expr->dump(os, i + 4);
+          os << indent(i + 2) << "}\n";
+        }
+      }
+      os << indent(i) << "}\n";
+    }
+    
+  public:
+    inline const expression::ptr& get_name_expr () const { return m_name_expr; }
+  
+  private:
+    expression::ptr m_name_expr = nullptr;
+    
   };
 
   class instruction_statement : public statement

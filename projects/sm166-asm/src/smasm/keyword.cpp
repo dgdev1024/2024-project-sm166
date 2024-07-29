@@ -13,6 +13,7 @@ namespace smasm
     { "byte", { keyword_type::language, language_type::lt_byte } },
     { "word", { keyword_type::language, language_type::lt_word } },
     { "long", { keyword_type::language, language_type::lt_long } },
+    { "offset", { keyword_type::language, language_type::lt_offset } },
     { "repeat", { keyword_type::language, language_type::lt_repeat } },
     { "shift", { keyword_type::language, language_type::lt_shift } },
     { "if", { keyword_type::language, language_type::lt_if } },
@@ -26,6 +27,9 @@ namespace smasm
     { "global", { keyword_type::language, language_type::lt_global } },
     { "local", { keyword_type::language, language_type::lt_local } },
     { "function", { keyword_type::language, language_type::lt_function } },
+    { "charmap", { keyword_type::language, language_type::lt_charmap } },
+    { "newcharmap", { keyword_type::language, language_type::lt_newcharmap } },
+    { "setcharmap", { keyword_type::language, language_type::lt_setcharmap } },
 
     // Directives
     { "size", { keyword_type::directive, directive_type::dt_size } },

@@ -8,6 +8,7 @@ namespace smasm
   assembly::assembly ()
   {
     m_rom.resize(0x210, 0x00);
+    m_charmaps[""] = {};
   }
 
   bool assembly::resize_rom (const std::size_t size)

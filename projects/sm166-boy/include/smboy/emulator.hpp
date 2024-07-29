@@ -10,6 +10,7 @@
 #include <smboy/realtime.hpp>
 #include <smboy/renderer.hpp>
 #include <smboy/joypad.hpp>
+#include <smboy/audio.hpp>
 #include <sm/processor.hpp>
 
 namespace smboy
@@ -97,6 +98,9 @@ namespace smboy
     inline joypad& get_joypad () { return m_joypad; }
     inline const joypad& get_joypad () const { return m_joypad; }
     
+    inline audio& get_audio () { return m_audio; }
+    inline const audio& get_audio () const { return m_audio; }
+    
     /**
      * @brief Retrieves the `smboy` emulator's memory management unit (MMU).
      *
@@ -137,6 +141,8 @@ namespace smboy
     renderer m_renderer;
     
     joypad m_joypad;
+    
+    audio m_audio;
     
     /**
      * @brief The `smboy` emulator's memory management unit (MMU).

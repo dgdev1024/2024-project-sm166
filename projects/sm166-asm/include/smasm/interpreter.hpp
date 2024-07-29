@@ -49,6 +49,12 @@ namespace smasm
       environment& env);
     value::ptr evaluate_incbin_statement (const incbin_statement* stmt,
       environment& env);
+    value::ptr evaluate_charmap_statement (const charmap_statement* stmt,
+      environment& env);
+    value::ptr evaluate_newcharmap_statement (const newcharmap_statement* stmt,
+      environment& env);
+    value::ptr evaluate_setcharmap_statement (const setcharmap_statement* stmt,
+      environment& env);
     value::ptr evaluate_instruction_statement (const instruction_statement* stmt,
       environment& env);
     value::ptr evaluate_identifier (const identifier* expr,

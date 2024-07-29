@@ -28,6 +28,9 @@ namespace smasm
     statement::ptr  parse_if_statement (lexer& _lexer);
     statement::ptr  parse_include_statement (lexer& _lexer);
     statement::ptr  parse_incbin_statement (lexer& _lexer);
+    statement::ptr  parse_charmap_statement (lexer& _lexer);
+    statement::ptr  parse_newcharmap_statement (lexer& _lexer);
+    statement::ptr  parse_setcharmap_statement (lexer& _lexer);
     statement::ptr  parse_instruction_statement (lexer& _lexer);
   
   private:

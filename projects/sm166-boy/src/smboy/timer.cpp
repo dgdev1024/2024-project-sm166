@@ -27,6 +27,9 @@ namespace smboy
     // Increment the timer's counter. Keep a copy of the old divider before doing so.
     std::uint16_t old_divider = (m_divider++);
     
+    // Check to see if the audio context needs to be updated.
+    m_div_apu = (sm_getbit(old_divider, 11) != 0) && (sm_getbit(m_divider, 11) == 0);
+    
     // Don't bother updating the timer's counter if it's currently disabled.
     if (m_control.enabled == 0) { return; }
     

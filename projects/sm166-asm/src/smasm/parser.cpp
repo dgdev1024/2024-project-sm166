@@ -124,6 +124,11 @@ namespace smasm
         case language_type::lt_let:     return parse_variable_declaration_statement(_lexer, false);
         case language_type::lt_const:   return parse_variable_declaration_statement(_lexer, true);
         case language_type::lt_function:return parse_function_expression(_lexer);
+        case language_type::lt_charmap: return parse_charmap_statement(_lexer);
+        case language_type::lt_newcharmap:
+          return parse_newcharmap_statement(_lexer);
+        case language_type::lt_setcharmap:
+          return parse_setcharmap_statement(_lexer);
         case language_type::lt_else:
           std::cerr <<  "[parser] Found 'else' statement without matching 'if' statement."
                     <<  std::endl;
@@ -221,37 +226,32 @@ namespace smasm
 
   statement::ptr parser::parse_label_statement (lexer& _lexer)
   {
-    auto label_expr = parse_expression(_lexer);
+    auto label_expr = parse_primary_expression(_lexer);
     if (label_expr == nullptr) {
-      return nullptr;
-    } else if (label_expr->get_syntax_type() != syntax_type::identifier) {
-      std::cerr <<  "[parser] Expected identifier expression after 'def' in label declaration."
-                <<  std::endl;
-      return nullptr;
-    } 
-    
-    auto label_identifier = expression_cast<identifier>(label_expr);
-    if (label_identifier->get_keyword().type != keyword_type::none)
-    {
-      std::cerr <<  "[parser] Label identifier '" << label_identifier->get_symbol() 
-                <<  "' is a reserved keyword."
-                <<  std::endl;
       return nullptr;
     }
 
     if (_lexer.discard_token().type != token_type::colon) 
     {
-      std::cerr <<  "[parser] Expected ':' after declaration of label '"
-                <<  label_identifier->get_symbol() << "'."
+      std::cerr <<  "[parser] Expected ':' at end of label statement."
                 <<  std::endl;
       return nullptr;
     }
 
-    return statement::make<label_statement>(label_identifier);
+    return statement::make<label_statement>(label_expr);
   }
 
   statement::ptr parser::parse_data_statement (lexer& _lexer, int size)
   {
+    bool offset = false;
+  
+    auto kw = _lexer.token_at().get_keyword();
+    if (kw.type == keyword_type::language && kw.param_one == language_type::lt_offset)
+    {
+      _lexer.discard_token();
+      offset = true;
+    }
+  
     expression::array arr;
 
     while (true) {
@@ -265,7 +265,7 @@ namespace smasm
       if (_lexer.token_at().type == token_type::comma) {
         _lexer.discard_token();
       } else {
-        return statement::make<data_statement>(arr, size);
+        return statement::make<data_statement>(arr, size, offset);
       }
     }
   }
@@ -341,10 +341,13 @@ namespace smasm
     }
     else
     {
+      _lexer.discard_token();
+    
       while (true)
       {
         if (_lexer.token_at().type == token_type::close_brace)
         {
+          _lexer.discard_token();
           break;
         }
         
@@ -370,10 +373,13 @@ namespace smasm
       }
       else
       {
+        _lexer.discard_token();
+        
         while (true)
         {
           if (_lexer.token_at().type == token_type::close_brace)
           {
+            _lexer.discard_token();
             break;
           }
           
@@ -418,6 +424,41 @@ namespace smasm
     return statement::make<incbin_statement>(
       expression_cast<string_literal>(filename_expr)
     );
+  }
+  
+  statement::ptr parser::parse_charmap_statement (lexer& _lexer)
+  {
+    expression::ptr char_expr = parse_expression(_lexer);
+    if (char_expr == nullptr) { return nullptr; }
+    
+    if (_lexer.discard_token().type != token_type::comma)
+    {
+      std::cerr << "[parser] "
+                << "Expected ',' between parameters in 'charmap' statement."
+                << std::endl;
+      return nullptr;
+    }
+    
+    expression::ptr map_expr = parse_expression(_lexer);
+    if (map_expr == nullptr) { return nullptr; }
+    
+    return statement::make<charmap_statement>(char_expr, map_expr);
+  }
+  
+  statement::ptr parser::parse_newcharmap_statement (lexer& _lexer)
+  {
+    expression::ptr name_expr = parse_expression(_lexer);
+    if (name_expr == nullptr) { return nullptr; }
+    
+    return statement::make<newcharmap_statement>(name_expr);
+  }
+  
+  statement::ptr parser::parse_setcharmap_statement (lexer& _lexer)
+  {
+    expression::ptr name_expr = parse_expression(_lexer);
+    if (name_expr == nullptr) { return nullptr; }
+    
+    return statement::make<setcharmap_statement>(name_expr);
   }
 
   statement::ptr parser::parse_instruction_statement (lexer& _lexer)

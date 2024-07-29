@@ -42,6 +42,9 @@ namespace smboy
     void tick ();
     
   public:
+    inline bool audio_needs_update () const { return m_div_apu; }
+    
+  public:
     
     inline std::uint8_t read_reg_div () const { return (m_divider >> 8) & 0xFF; }
     inline std::uint8_t read_reg_tima () const { return m_counter; }
@@ -60,6 +63,7 @@ namespace smboy
     std::uint8_t    m_counter = 0x00;
     std::uint8_t    m_modulo  = 0x00;
     timer_control   m_control;
+    bool            m_div_apu = false;
 
   };
 

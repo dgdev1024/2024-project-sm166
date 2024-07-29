@@ -34,6 +34,33 @@ namespace smasm
     {
       return (m_in_ram == true) ? m_ram_cursor : m_rom_cursor;
     }
+    
+    inline std::unordered_map<std::string, std::uint8_t>& get_current_charmap ()
+    {
+      return m_charmaps.at(m_current_charmap);
+    }
+    
+    inline const std::unordered_map<std::string, std::uint8_t>& get_current_charmap () const
+    {
+      return m_charmaps.at(m_current_charmap);
+    }
+    
+    inline bool set_current_charmap (const std::string& name, bool create_if_not_found = false)
+    {
+      if (m_charmaps.contains(name))
+      {
+        m_current_charmap = name;
+        return true;
+      }
+      else if (create_if_not_found == true)
+      {
+        m_charmaps[name] = {};
+        m_current_charmap = name;
+        return true;
+      }
+      
+      return false;
+    }
 
   private:
     std::unordered_set<fs::path>  m_binary_files;
@@ -41,6 +68,13 @@ namespace smasm
     std::size_t                   m_rom_cursor  = 0x00000200;
     std::size_t                   m_ram_cursor  = 0x80000000;
     bool                          m_in_ram      = false;
+    
+  private:
+    std::unordered_map<
+      std::string,
+      std::unordered_map<std::string, std::uint8_t>
+    > m_charmaps;
+    std::string m_current_charmap = "";
 
   };
 

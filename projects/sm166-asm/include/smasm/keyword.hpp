@@ -25,6 +25,7 @@ namespace smasm
     lt_byte,
     lt_word,
     lt_long,
+    lt_offset,
     lt_repeat,
     lt_shift,
     lt_if,
@@ -36,7 +37,10 @@ namespace smasm
     lt_const,
     lt_global,
     lt_local,
-    lt_function
+    lt_function,
+    lt_charmap,
+    lt_newcharmap,
+    lt_setcharmap
   };
 
   enum directive_type

@@ -76,6 +76,18 @@ namespace smasm
         return evaluate_instruction_statement(
           statement_cast<instruction_statement>(stmt).get(), env
         );
+      case syntax_type::charmap_statement:
+        return evaluate_charmap_statement(
+          statement_cast<charmap_statement>(stmt).get(), env
+        );
+      case syntax_type::newcharmap_statement:
+        return evaluate_newcharmap_statement(
+          statement_cast<newcharmap_statement>(stmt).get(), env
+        );
+      case syntax_type::setcharmap_statement:
+        return evaluate_setcharmap_statement(
+          statement_cast<setcharmap_statement>(stmt).get(), env
+        );
       case syntax_type::function_expression:
         return evaluate_function_expression(
           statement_cast<function_expression>(stmt).get(), env
@@ -156,11 +168,13 @@ namespace smasm
     if (dir->is_ram() == true) {
       m_assembly.set_ram_mode(true);
       m_assembly.set_ram_cursor(casted_value->get_integer());
+      env.declare_variable("_union", casted_value);
     } else {
       m_assembly.set_ram_mode(false);
       if (m_assembly.set_rom_cursor(casted_value->get_integer()) == false) {
         return nullptr;
       }
+      env.declare_variable("_union", value::make<void_value>());
     }
 
     return value::make<void_value>();
@@ -234,10 +248,31 @@ namespace smasm
   value::ptr interpreter::evaluate_label_statement (const label_statement* stmt,
     environment& env)
   {
-    auto label_expr = expression_cast<identifier>(stmt->get_label());
+    std::string label = "";
+    auto label_expr = stmt->get_label();
+    if (label_expr->get_syntax_type() == syntax_type::identifier)
+    {
+      label = expression_cast<identifier>(label_expr)->get_symbol();
+    }
+    else
+    {
+      auto label_value = evaluate(label_expr);
+      if (label_value == nullptr) { return nullptr; }
+      else if (label_value->get_value_type() != value_type::string) {
+        return nullptr;
+      }
+      
+      label = value_cast<string_value>(label_value)->get_string();
+    }
+    
+    if (keyword::lookup(label).type != keyword_type::none)
+    {
+      return nullptr;
+    }
+  
     if (
       env.declare_variable(
-        label_expr->get_symbol(), 
+        label,
         value::make<number_value>(m_assembly.get_current_cursor())
       ) == false
     ) {
@@ -270,6 +305,8 @@ namespace smasm
         m_assembly.set_ram_cursor(cursor + (count * stmt->get_size()));
       }
     } else {
+      const auto& charmap = m_assembly.get_current_charmap();
+    
       for (std::size_t i = 0; i < exprs.size(); ++i) {
         value::ptr val = evaluate(exprs.at(i), env);
         if (val == nullptr) { return nullptr; }
@@ -294,8 +331,35 @@ namespace smasm
 
           auto str = value_cast<string_value>(val)->get_string();
 
-          for (const char c : str) {
-            if (m_assembly.write_byte((std::uint8_t) c) == false) {
+          for (std::size_t ci = 0; ci < str.length(); ++ci) {
+            const char& c = str.at(ci);
+            if (c == '<')
+            {
+              std::size_t closing_brace = str.find('>', ci);
+              if (closing_brace != std::string::npos)
+              {
+                auto substring = str.substr(ci, closing_brace - ci + 1);
+                
+                if (charmap.contains(substring) == true)
+                {
+                  bool result = m_assembly.write_byte(charmap.at(substring));
+                  if (result == false) { return nullptr; }
+                  else
+                  {
+                    ci = closing_brace;
+                    continue;
+                  }
+                }
+              }
+            }
+            
+            bool result = m_assembly.write_byte(
+              (charmap.contains(std::string { c }) == true) ?
+                charmap.at(std::string { c }) :
+                (std::uint8_t) c
+            );
+          
+            if (result == false) {
               return nullptr;
             }
           }
@@ -413,6 +477,96 @@ namespace smasm
       return nullptr;
     }
 
+    return value::make<void_value>();
+  }
+  
+  value::ptr interpreter::evaluate_charmap_statement (const charmap_statement* stmt,
+    environment& env)
+  {
+    value::ptr char_value = evaluate(stmt->get_char_expr(), env);
+    if (char_value == nullptr) { return nullptr; }
+    else if (char_value->get_value_type() != value_type::string)
+    {
+      std::cerr << "[interpreter] "
+                << "Expected string for first argument to 'charmap' statement."
+                << std::endl;
+      return nullptr;
+    }
+    
+    value::ptr map_value = evaluate(stmt->get_map_expr(), env);
+    if (map_value == nullptr) { return nullptr; }
+    else if (map_value->get_value_type() != value_type::number)
+    {
+      std::cerr << "[interpreter] "
+                << "Expected number for second argument to 'charmap' statement."
+                << std::endl;
+      return nullptr;
+    }
+    
+    auto& charmap = m_assembly.get_current_charmap();
+    auto mapping = value_cast<string_value>(char_value)->get_string();
+    
+    if (mapping == "")
+    {
+      std::cerr << "[interpreter] "
+                << "String argument to 'charmap' statement cannot be blank."
+                << std::endl;
+      return nullptr;
+    }
+    
+    if (mapping.starts_with("<") && mapping.ends_with(">"))
+    {
+      charmap[mapping] = value_cast<number_value>(map_value)->get_integer();
+    }
+    else
+    {
+      charmap[mapping.substr(0, 1)] = value_cast<number_value>(map_value)->get_integer();
+    }
+    
+    return value::make<void_value>();
+  }
+  
+  value::ptr interpreter::evaluate_newcharmap_statement (const newcharmap_statement* stmt,
+    environment& env)
+  {
+    value::ptr name_value = evaluate(stmt->get_name_expr(), env);
+    if (name_value == nullptr) { return nullptr; }
+    else if (name_value->get_value_type() != value_type::string)
+    {
+      std::cerr << "[interpreter] "
+                << "Expected string for argument to 'newcharmap' statement."
+                << std::endl;
+      return nullptr;
+    }
+    
+    const auto& name = value_cast<string_value>(name_value)->get_string();
+    m_assembly.set_current_charmap(name, true);
+    
+    return value::make<void_value>();
+  }
+  
+  value::ptr interpreter::evaluate_setcharmap_statement (const setcharmap_statement* stmt,
+    environment& env)
+  {
+    value::ptr name_value = evaluate(stmt->get_name_expr(), env);
+    if (name_value == nullptr) { return nullptr; }
+    else if (name_value->get_value_type() != value_type::string)
+    {
+      std::cerr << "[interpreter] "
+                << "Expected string for argument to 'setcharmap' statement."
+                << std::endl;
+      return nullptr;
+    }
+    
+    const auto& name = value_cast<string_value>(name_value)->get_string();
+    if (m_assembly.set_current_charmap(name) == false)
+    {
+      std::cerr << "[interpreter] "
+                << "Charmap '" << name << "' not found."
+                << std::endl;
+      return nullptr;
+    }
+    
     return value::make<void_value>();
   }
 

@@ -17,8 +17,6 @@ const global PROGRAM_AUTHOR   = "Dennis W. Griffin"
 ;; Program Body ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 .section rom $208
-  def TestBed:          byte strlen("Dennis W. Griffin")
-
   def Main:             jmp n, [Main]
 
 ;; Entry Point ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

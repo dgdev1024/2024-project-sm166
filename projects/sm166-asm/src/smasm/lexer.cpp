@@ -109,6 +109,11 @@ namespace smasm
     m_tokens.clear();
   }
 
+  void lexer::clear_includes ()
+  {
+    m_paths.clear();
+  }
+
   #define smasm_emplace(type, contents) \
     m_tokens.emplace(m_tokens.begin() + m_write_ptr, m_current_path, m_current_line, type, \
       contents); m_write_ptr++;
@@ -124,7 +129,7 @@ namespace smasm
       contents  += static_cast<char>(character);
       lowercase += static_cast<char>(std::tolower((unsigned char) character));
       character = m_file.get();
-    } while (std::isalnum(character) || character == '_');
+    } while (std::isalnum(character) || character == '_' || character == '#');
 
     // Look up the token's lowercase contents to see if this is a reserved keyword and what kind of
     // keyword that may be. Emplace the appropriate identifier token.
@@ -155,15 +160,41 @@ namespace smasm
 
     // Keep a string to hold the token's contents.
     std::string contents = "";
+    bool escaping = false;
 
     // Advance the file stream past the opening quotes.
     std::int32_t matching_quotes = character;
     character = m_file.get();
 
     // Collect characters until the closing matching quote is encountered.
-    while (character != matching_quotes) {
-      contents  +=  static_cast<char>(character);
+    while (character != matching_quotes || escaping == true) {
+      if (escaping == true) {
+        switch (character)
+        {
+          case 't':  contents += '\t'; break;
+          case 'r':  contents += '\r'; break;
+          case 'n':  contents += '\n'; break;
+          case '\\': contents += '\\'; break;
+          case '\'': contents += '\''; break;
+          case '\"': contents += '\"'; break;
+          default: break;
+        }
+
+        escaping = false;
+      } else {
+        if (character == '\\') {
+          escaping = true;
+        } else {
+          contents += static_cast<char>(character);
+        }
+      }
       character =   m_file.get();
+
+      if (character == std::char_traits<char>::eof()) {
+        std::cerr << "[lexer] Unexpected end of file reached while collecting string."
+                  << std::endl;
+        return -1;
+      }
     }
 
     // Emplace the string.
@@ -179,6 +210,7 @@ namespace smasm
     // not this is an integer or a floating-point number being collected.
     std::string contents = "";
     bool        is_float = false;
+    bool        has_precision = false;
 
     // Collect characters until a non-numeric-character or a second period is encountered.
     do {
@@ -186,17 +218,41 @@ namespace smasm
       // If a period is encountered, then we know that we are collecting a number token, rather than
       // an integer token.
       //
-      // If a second period is encountered while collecting the same token, then we can assume at
+      // If the letter 'q' is encountered, then this indicates a fixed point number token with a
+      // custom bit precision for the fractional part.
+      //
+      // If a second one if either is encountered while collecting the same token, then we can assume at
       // that point that we have finished collecting this token.
-      if (character == '.') {
+      if (character == '.') 
+      {
         if (is_float == true) { break; }
-        else { is_float = true; }
+        else 
+        { 
+          is_float = true; 
+          if (contents == "")
+          {
+            contents += "0";
+          }
+        }
+      }
+      else if (character == 'q')
+      {
+        if (has_precision == true) { break; }
+        else
+        {
+          is_float = true;
+          has_precision = true;
+          if (contents == "")
+          {
+            contents += "0";
+          }
+        }
       }
 
       contents  +=  static_cast<char>(character);
       character =   m_file.get();
 
-    } while (std::isdigit(character) || character == '.');
+    } while (std::isdigit(character) || character == '.' || character == 'q');
 
     // Emplace an integer or a floating-point numeric token.
     smasm_emplace(is_float == true ? token_type::number : token_type::integer, contents);
@@ -305,6 +361,7 @@ namespace smasm
           return 1;
         }
       } break;
+      case '~':  type =    token_type::tilde; break;
       case '*':  type =    token_type::asterisk; break;
       case '+':  type =    token_type::plus; break;
       case '-':  type =    token_type::minus; break;

@@ -79,22 +79,37 @@ namespace smboy
       return false;
     }
 
-    // Attempt to load the SRAM file.
-    std::fstream file { m_sram_path, std::ios::in | std::ios::binary };
-    if (file.is_open() == false) {
-      std::cerr <<  "[program] "
-                <<  "Could not open SRAM file '" << m_sram_path << "' for reading." << std::endl;
-      return false;
+    // Attempt to load the SRAM file if it exists. Create it if it doesn't.
+    if (fs::exists(m_sram_path) == true)
+    {
+      std::fstream file { m_sram_path, std::ios::in | std::ios::binary };
+      if (file.is_open() == false) {
+        std::cerr <<  "[program] "
+                  <<  "Could not open SRAM file '" << m_sram_path << "' for reading." << std::endl;
+        return false;
+      }
+
+      // Get the size of the SRAM file.
+      file.seekg(0, file.end);
+      auto size = file.tellg();
+      file.seekg(0, file.beg);
+
+      // Load the SRAM data. Don't load any more than 256 KB of SRAM.
+      file.read(reinterpret_cast<char*>(m_sram.data()), m_sram.size());
+      file.close();
     }
+    else
+    {
+      std::fstream file { m_sram_path, std::ios::out | std::ios::binary };
+      if (file.is_open() == false) {
+        std::cerr <<  "[program] "
+                  <<  "Could not create SRAM file '" << m_sram_path << "'." << std::endl;
+        return false;
+      }
 
-    // Get the size of the SRAM file.
-    file.seekg(0, file.end);
-    auto size = file.tellg();
-    file.seekg(0, file.beg);
-
-    // Load the SRAM data. Don't load any more than 256 KB of SRAM.
-    file.read(reinterpret_cast<char*>(m_sram.data()), m_sram.size());
-    file.close();
+      file.write(reinterpret_cast<const char*>(m_sram.data()), m_sram.size());
+      file.close();
+    }
 
     return true;
   

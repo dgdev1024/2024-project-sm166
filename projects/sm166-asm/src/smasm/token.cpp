@@ -41,6 +41,7 @@ namespace smasm
       case token_type::double_pipe: return "or";
       case token_type::ampersand: return "ampersand";
       case token_type::double_ampersand: return "and";
+      case token_type::tilde: return "tilde";
       case token_type::asterisk: return "asterisk";
       case token_type::plus: return "plus";
       case token_type::equals: return "equals";
@@ -76,28 +77,20 @@ namespace smasm
     );
   }
 
-  std::uint64_t token::get_integer () const
+  std::uint32_t token::get_integer () const
   {
     switch (type)
     {
-      case token_type::integer:       return std::stoul(contents, nullptr, 10);
-      case token_type::binary:        return std::stoul(contents, nullptr, 2);
-      case token_type::hexadecimal:   return std::stoul(contents, nullptr, 16);
-      case token_type::octal:         return std::stoul(contents, nullptr, 8);
-      default:                        return 0;
-    }
-  }
-
-  double token::get_number () const
-  {
-    switch (type)
-    {
-      case token_type::integer:
-      case token_type::binary:
-      case token_type::hexadecimal:
-      case token_type::octal:         return static_cast<double>(get_integer());
-      case token_type::number:        return std::stod(contents, nullptr);
-      default:                        return 0.0f;
+      case token_type::integer:       
+        return (std::uint32_t) std::stoul(contents, nullptr, 10);
+      case token_type::binary:        
+        return (std::uint32_t) std::stoul(contents, nullptr, 2);
+      case token_type::hexadecimal:   
+        return (std::uint32_t) std::stoul(contents, nullptr, 16);
+      case token_type::octal:         
+        return (std::uint32_t) std::stoul(contents, nullptr, 8);
+      default:                        
+        return 0;
     }
   }
 

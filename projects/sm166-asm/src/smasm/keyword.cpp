@@ -96,12 +96,14 @@ namespace smasm
     
     // GB CPU Register Aliases
     { "a",    { keyword_type::cpu_register, register_type::rt_b0 } },
+    { "f",    { keyword_type::cpu_register, register_type::rt_b1 } },
     { "b",    { keyword_type::cpu_register, register_type::rt_b2 } },
     { "c",    { keyword_type::cpu_register, register_type::rt_b3 } },
     { "d",    { keyword_type::cpu_register, register_type::rt_b4 } },
     { "e",    { keyword_type::cpu_register, register_type::rt_b5 } },
     { "h",    { keyword_type::cpu_register, register_type::rt_b6 } },
     { "l",    { keyword_type::cpu_register, register_type::rt_b7 } },
+    { "af",   { keyword_type::cpu_register, register_type::rt_w0 } },
     { "bc",   { keyword_type::cpu_register, register_type::rt_w1 } },
     { "de",   { keyword_type::cpu_register, register_type::rt_w2 } },
     { "hl",   { keyword_type::cpu_register, register_type::rt_w3 } },

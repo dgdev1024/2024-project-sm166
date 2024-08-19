@@ -23,7 +23,7 @@ namespace smasm
     return true;
   }
 
-  bool assembly::write_byte (std::uint8_t value)
+  bool assembly::write_byte (std::uint8_t value, bool first_pass)
   {
     if (m_in_ram == true) {
       std::cerr << "[assembly] Cannot write data outside of ROM mode." << std::endl;
@@ -32,25 +32,30 @@ namespace smasm
       m_rom.resize(m_rom.size() + 0x80);
     }
 
-    m_rom[m_rom_cursor++] = value;
+    if (first_pass == true) {
+      m_rom_cursor++;
+    } else {
+      m_rom[m_rom_cursor++] = value;
+    }
+
     return true;
   }
 
-  bool assembly::write_word (std::uint16_t value)
+  bool assembly::write_word (std::uint16_t value, bool first_pass)
   {
-    return  write_byte((value      ) & 0xFF) &&
-            write_byte((value >>  8) & 0xFF);
+    return  write_byte((value      ) & 0xFF, first_pass) &&
+            write_byte((value >>  8) & 0xFF, first_pass);
   }
 
-  bool assembly::write_long (std::uint32_t value)
+  bool assembly::write_long (std::uint32_t value, bool first_pass)
   {
-    return  write_byte((value      ) & 0xFF) &&
-            write_byte((value >>  8) & 0xFF) &&
-            write_byte((value >> 16) & 0xFF) &&
-            write_byte((value >> 24) & 0xFF);
+    return  write_byte((value      ) & 0xFF, first_pass) &&
+            write_byte((value >>  8) & 0xFF, first_pass) &&
+            write_byte((value >> 16) & 0xFF, first_pass) &&
+            write_byte((value >> 24) & 0xFF, first_pass);
   }
   
-  bool assembly::include_binary (const fs::path& path)
+  bool assembly::include_binary (const fs::path& path, bool first_pass)
   {
     const auto& absolute = fs::absolute(path).lexically_normal();
     if (m_binary_files.contains(absolute) == true)
@@ -71,6 +76,12 @@ namespace smasm
     
     file.seekg(0, file.end);
     auto size = file.tellg();
+    if (first_pass == true)
+    {
+      m_rom_cursor += size;
+      return true;
+    }
+
     file.seekg(0, file.beg);
     
     std::uint8_t byte = 0;
@@ -133,6 +144,11 @@ namespace smasm
   void assembly::set_ram_mode (bool on)
   {
     m_in_ram = on;
+  }
+
+  void assembly::clear_incbins ()
+  {
+    m_binary_files.clear();
   }
 
 }

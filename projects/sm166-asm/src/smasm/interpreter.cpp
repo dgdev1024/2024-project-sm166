@@ -21,6 +21,17 @@ namespace smasm
 
   value::ptr interpreter::evaluate (const statement::ptr& stmt)
   {
+    m_first = true;
+    m_lexer.clear_includes();
+    m_assembly.clear_incbins();
+    if (evaluate(stmt, m_environment) == nullptr)
+    {
+      return nullptr;
+    }
+
+    m_first = false;
+    m_lexer.clear_includes();
+    m_assembly.clear_incbins();
     return evaluate(stmt, m_environment);
   }
 
@@ -96,6 +107,10 @@ namespace smasm
         return evaluate_call_expression(
           statement_cast<call_expression>(stmt).get(), env
         );
+      case syntax_type::unary_expression:
+        return evaluate_unary_expression(
+          statement_cast<unary_expression>(stmt).get(), env
+        );
       case syntax_type::binary_expression:
         return evaluate_binary_expression(
           statement_cast<binary_expression>(stmt).get(), env
@@ -108,10 +123,15 @@ namespace smasm
         return evaluate_address_expression(
           statement_cast<address_literal>(stmt).get(), env
         );
-      case syntax_type::numeric_literal:
+      case syntax_type::numeric_literal: {
+        auto nl = statement_cast<numeric_literal>(stmt);
+
         return value::make<number_value>(
-          statement_cast<numeric_literal>(stmt)->get_number()
+          nl->get_integer(),
+          nl->get_fractional(),
+          nl->get_fraction_bits()
         );
+      } break;
       case syntax_type::string_literal:
         return value::make<string_value>(
           statement_cast<string_literal>(stmt)->get_string()
@@ -189,6 +209,18 @@ namespace smasm
     if (key_expr->get_syntax_type() == syntax_type::identifier)
     {
       key = expression_cast<identifier>(key_expr)->get_symbol();
+      if (key.starts_with('_'))
+      {
+        value::ptr result = evaluate(key_expr, env);
+        if (
+          result != nullptr &&
+          result->get_value_type() == value_type::string
+        )
+        {
+          key =
+            value_cast<string_value>(result)->get_string();
+        }
+      }
     }
     else if (key_expr->get_syntax_type() == syntax_type::string_literal)
     {
@@ -208,17 +240,11 @@ namespace smasm
         return nullptr;
       }
     }
-    
-    if (key.starts_with("_") == true)
-    {
-      std::cerr << "[interpreter] Variables cannot start with '_'." << std::endl;
-      return nullptr;
-    }
 
     auto value = evaluate(stmt->get_value_expr(), env);
     if (value == nullptr) {
       std::cerr <<  "[interpreter] Could not evaluate value in declaration of variable '"
-                <<  key << "." << std::endl;
+                <<  key << "'." << std::endl;
       return nullptr;
     } else if (value->get_value_type() == value_type::none) {
       std::cerr <<  "[interpreter] Declaration of variable '" << key
@@ -236,7 +262,7 @@ namespace smasm
       target_env.declare_variable(
         key,
         value,
-        stmt->is_constant()
+        m_first == false && stmt->is_constant()
       ) == false
     ) {
       return nullptr;
@@ -256,7 +282,7 @@ namespace smasm
     }
     else
     {
-      auto label_value = evaluate(label_expr);
+      auto label_value = evaluate(label_expr, env);
       if (label_value == nullptr) { return nullptr; }
       else if (label_value->get_value_type() != value_type::string) {
         return nullptr;
@@ -271,7 +297,7 @@ namespace smasm
     }
   
     if (
-      env.declare_variable(
+      m_environment.declare_variable(
         label,
         value::make<number_value>(m_assembly.get_current_cursor())
       ) == false
@@ -316,7 +342,7 @@ namespace smasm
           auto size = stmt->get_size();
           bool ok = true;
 
-          if (size == 4)           { ok = m_assembly.write_long(integer); }
+          if (size == 4)           { ok = m_assembly.write_long(integer & 0xFFFFFFFF); }
           else if (size == 2)      { ok = m_assembly.write_word(integer & 0xFFFF); }
           else if (size == 1)      { ok = m_assembly.write_byte(integer & 0xFF); }
           else                     { ok = false; }
@@ -393,7 +419,7 @@ namespace smasm
     
       for (const auto& body_stmt : stmt->get_body())
       {
-        last_evaluated = evaluate(body_stmt, scope_env);
+        last_evaluated = evaluate(body_stmt, *env.get_function_scope(true));
         if (last_evaluated == nullptr)
         {
           std::cerr << "[interpreter] In iteration #" << i << " of repeat statement." << std::endl;
@@ -435,11 +461,10 @@ namespace smasm
       target_body = &stmt->get_else_body();
     }
     
-    environment scope_env { &env, environment_scope::if_statement };
     value::ptr last_evaluated = value::make<void_value>();
     for (const auto& body_stmt : *target_body)
     {
-      last_evaluated = evaluate(body_stmt, scope_env);
+      last_evaluated = evaluate(body_stmt, *env.get_function_scope(true));
       if (last_evaluated == nullptr)
       {
         return nullptr;
@@ -653,8 +678,12 @@ namespace smasm
       case keyword_type::condition:
         return value::make<cpu_condition_value>((condition_type) keyword.param_one);
       default: {
-        const auto& variable = env.resolve_variable(expr->get_symbol());
+        const auto& variable = env.resolve_variable(expr->get_symbol(), m_first);
         if (variable == nullptr) {
+          if (m_first == true) {
+            return value::make<number_value>(0);
+          }
+
           return nullptr;
         }
 
@@ -681,7 +710,7 @@ namespace smasm
       target_env.declare_variable(
         expr->get_name(),
         value,
-        true
+        m_first == false
       ) == false
     ) {
       return nullptr;
@@ -751,6 +780,67 @@ namespace smasm
     
     return last_evaluated;
   }
+
+  namespace priv
+  {
+
+    value::ptr unary_number (const value::ptr& val, const std::string& oper)
+    {
+      auto cast = value_cast<number_value>(val);
+
+      if (oper == "+")      
+      { 
+        return value::make<number_value>(+cast->get_integer(),
+          cast->get_fractional(), cast->get_fraction_bits()); 
+      }
+      else if (oper == "-") 
+      { 
+        return value::make<number_value>(-cast->get_integer(),
+          cast->get_fractional(), cast->get_fraction_bits()); 
+      }
+      else if (oper == "~") 
+      { 
+        return value::make<number_value>(~cast->get_integer()); 
+      }
+      
+      std::cerr << "[interpreter] Invalid operation '" << oper
+                << "' encountered in unary number expression."
+                << std::endl;
+      return nullptr;
+    }
+
+    value::ptr unary_address (const value::ptr& val, const std::string& oper)
+    {
+      auto cast = value_cast<address_value>(val);
+      if (oper == "~") { return value::make<address_value>(~cast->get_address()); }
+      
+      std::cerr << "[interpreter] Invalid operation '" << oper
+                << "' encountered in unary address expression."
+                << std::endl;
+      return nullptr;
+    }
+
+  }
+
+  value::ptr interpreter::evaluate_unary_expression (const unary_expression* expr,
+    environment& env)
+  {
+    auto eval = evaluate(expr->get_expr(), env);
+    if (eval == nullptr) { return nullptr; }
+
+    switch (eval->get_value_type())
+    {
+      // case value_type::number:  return priv::unary_number(eval, expr->get_oper());
+      case value_type::number: {
+        auto test = priv::unary_number(eval, expr->get_oper());
+        // std::cout << std::hex << value_cast<number_value>(test)->get_integer() << std::endl;
+        // std::cout << std::dec;
+        return test;
+      } break;
+      case value_type::address: return priv::unary_address(eval, expr->get_oper());
+      default:                  return nullptr;
+    }
+  }
   
   namespace priv
   {
@@ -762,25 +852,33 @@ namespace smasm
       auto right = value_cast<number_value>(rhs);
       
       if (oper == "+")  
-        { return value::make<number_value>(left->get_number() + right->get_number()); }
+      { 
+        return value::make<number_value>(left->get_integer() + right->get_integer()); 
+      }
       else if (oper == "-")  
-        { return value::make<number_value>(left->get_number() - right->get_number()); }
+      { 
+        return value::make<number_value>(left->get_integer() - right->get_integer()); 
+      }
       else if (oper == "*")  
-        { return value::make<number_value>(left->get_number() * right->get_number()); }
-      else if (oper == "/") { 
-        if (right->get_number() == 0.0) {
+      { 
+        return value::make<number_value>(left->get_integer() * right->get_integer()); 
+      }
+      else if (oper == "/") 
+      { 
+        if (right->get_integer() == 0) {
           std::cerr <<  "[interpreter] Attempted division by zero encountered." << std::endl;
           return nullptr;
         }
-        return value::make<number_value>(left->get_number() / right->get_number()); 
+        return value::make<number_value>(left->get_integer() / right->get_integer()); 
       }
-      else if (oper == "%") { 
-        if (right->get_number() == 0.0) {
+      else if (oper == "%") 
+      { 
+        if (right->get_integer() == 0) {
           std::cerr <<  "[interpreter] Modulo with attempted division by zero encountered." 
                     <<  std::endl;
           return nullptr;
         }
-        return value::make<number_value>(std::fmod(left->get_number(), right->get_number())); 
+        return value::make<number_value>(left->get_integer() % right->get_integer()); 
       }
       else if (oper == "&")  
         { return value::make<number_value>(left->get_integer() & right->get_integer()); }
@@ -921,7 +1019,7 @@ namespace smasm
       if (oper == "+")  
       { 
         return value::make<string_value>(left->get_string() + 
-          std::to_string(right->get_number())); 
+          std::to_string(right->get_integer())); 
       }
       
       std::cerr << "[interpreter] Invalid operation '" << oper

@@ -63,6 +63,8 @@ namespace smasm
       environment& env);
     value::ptr evaluate_call_expression (const call_expression* expr,
       environment& env);
+    value::ptr evaluate_unary_expression (const unary_expression* expr,
+      environment& env);
     value::ptr evaluate_binary_expression (const binary_expression* expr,
       environment& env);
     value::ptr evaluate_address_expression (const address_literal* expr,

@@ -26,7 +26,8 @@ const global BLANK_TILE       = $08
 
 ;; Program Body ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-.section rom $208
+.section rom $200
+  def EntryPoint:       jmp n, [Main]
 
   include "./tile-data.asm"
   include "./tile-map.asm"
@@ -134,11 +135,11 @@ const global BLANK_TILE       = $08
                         ret n
 
   def ClearOAM:         xor b0
-                        ld b1, OAM_SIZE
+                        ld b8, OAM_SIZE
                         ld l1, OAM_START
   def ClearOAMLoop:     st [l1], b0
                         inc l1
-                        dec b1
+                        dec b8
                         jmp nz, [ClearOAMLoop]
                         ret n
 
@@ -180,26 +181,26 @@ const global BLANK_TILE       = $08
                         shb [HW_LCDC]
                         ret n
                         
-  def MoveBall:         ld b1, [wBallVelocityX]
+  def MoveBall:         ld b8, [wBallVelocityX]
                         ld b0, [(OAM_START + 5)]
-                        add b1
+                        add b8
                         st [(OAM_START + 5)], b0
-                        ld b1, [wBallVelocityY]
+                        ld b8, [wBallVelocityY]
                         ld b0, [(OAM_START + 4)]
-                        add b1
+                        add b8
                         st [(OAM_START + 4)], b0
                         ret n
                         
-  def BreakBrickLeft:   ld b1, BLANK_TILE
-                        st [l3], b1
+  def BreakBrickLeft:   ld b8, BLANK_TILE
+                        st [l3], b8
                         inc l3
-                        st [l3], b1
+                        st [l3], b8
                         ret n
                         
-  def BreakBrickRight:  ld b1, BLANK_TILE
-                        st [l3], b1
+  def BreakBrickRight:  ld b8, BLANK_TILE
+                        st [l3], b8
                         dec l3
-                        st [l3], b1
+                        st [l3], b8
                         ret n
                         
   def CheckBrick:       ld b0, [l3]
@@ -233,27 +234,27 @@ const global BLANK_TILE       = $08
                         st [wBallVelocityY], b0
                         ret n
                         
-  def CheckBounceBall:  ld b1, GetObjectY(0)
-                        ld b0, GetObjectY(1)
+  def CheckBounceBall:  ld b8, GetObjectY(0, OAM_START)
+                        ld b0, GetObjectY(1, OAM_START)
                         add 8
-                        cmp b1
+                        cmp b8
                         ret nz
                         
-                        ld b1, GetObjectX(0)
-                        ld b0, GetObjectX(1)
+                        ld b8, GetObjectX(0, OAM_START)
+                        ld b0, GetObjectX(1, OAM_START)
                         sub 8
-                        cmp b1
+                        cmp b8
                         ret nc
                         
                         add (8 + 16)
-                        cmp b1
+                        cmp b8
                         jmp nc, [OnBounceBall]
                         ret n
                         
-  def CheckBounce:      ld b0, GetObjectY(1)
+  def CheckBounce:      ld b0, GetObjectY(1, OAM_START)
                         sub (16 + 1)
                         mv b3, b0
-                        ld b0, GetObjectX(1)
+                        ld b0, GetObjectX(1, OAM_START)
                         sub 8
                         mv b2, b0
                         call n, [GetTileByPixel]
@@ -261,20 +262,20 @@ const global BLANK_TILE       = $08
                         call n, [IsWallTile]
                         call z, [OnBounceTop]
                         
-                        ld b0, GetObjectY(1)
+                        ld b0, GetObjectY(1, OAM_START)
                         sub 16
                         mv b3, b0
-                        ld b0, GetObjectX(1)
+                        ld b0, GetObjectX(1, OAM_START)
                         mv b2, b0
                         call n, [GetTileByPixel]
                         ld b0, [l3]
                         call n, [IsWallTile]
                         call z, [OnBounceRight]
                         
-                        ld b0, GetObjectY(1)
+                        ld b0, GetObjectY(1, OAM_START)
                         sub 16
                         mv b3, b0
-                        ld b0, GetObjectX(1)
+                        ld b0, GetObjectX(1, OAM_START)
                         sub (8 + 1)
                         mv b2, b0
                         call n, [GetTileByPixel]
@@ -282,10 +283,10 @@ const global BLANK_TILE       = $08
                         call n, [IsWallTile]
                         call z, [OnBounceLeft]
                         
-                        ld b0, GetObjectY(1)
+                        ld b0, GetObjectY(1, OAM_START)
                         sub (16 - 1)
                         mv b3, b0
-                        ld b0, GetObjectX(1)
+                        ld b0, GetObjectX(1, OAM_START)
                         sub 8
                         mv b2, b0
                         call n, [GetTileByPixel]
@@ -334,7 +335,3 @@ const global BLANK_TILE       = $08
                         call n, [CheckInput]
                         jmp n, [Loop]
 
-;; Entry Point ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-.section rom $200
-  def EntryPoint:       jmp n, [Main]

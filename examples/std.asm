@@ -152,45 +152,49 @@ const global OBJECT_SCY_OFFSET    = 16
 
 function GetObjectY (index)
 {
-  let local start_address = OAM_START
-  if (_count >= 2)
+  let global oam_start_address = OAM_START
+  
+  if (_count == 2)
   {
-    let local start_address = _1
+    let global oam_start_address = _1
   }
 
-  [(start_address + ((index % OBJECT_COUNT) * OBJECT_SIZE))]
+  [(oam_start_address + ((index % OBJECT_COUNT) * OBJECT_SIZE))]
 }
 
 function GetObjectX (index)
 {
-  let local start_address = OAM_START
-  if (_count >= 2)
+  let local oam_start_address = OAM_START
+  
+  if (_count == 2)
   {
-    let local start_address = _1
+    let local oam_start_address = _1
   }
 
-  [(start_address + ((index % OBJECT_COUNT) * OBJECT_SIZE) + 1)]
+  [(oam_start_address + ((index % OBJECT_COUNT) * OBJECT_SIZE) + 1)]
 }
 
 function GetObjectTileIndex (index)
 {
-  let local start_address = OAM_START
-  if (_count >= 2)
+  let local oam_start_address = OAM_START
+  
+  if (_count == 2)
   {
-    let local start_address = _1
+    let local oam_start_address = _1
   }
 
-  [(start_address + ((index % OBJECT_COUNT) * OBJECT_SIZE) + 2)]
+  [(oam_start_address + ((index % OBJECT_COUNT) * OBJECT_SIZE) + 2)]
 }
 
 function GetObjectTileFlags (index)
 {
-  let local start_address = OAM_START
-  if (_count >= 2)
+  let local oam_start_address = OAM_START
+  
+  if (_count == 2)
   {
-    let local start_address = _1
+    let local oam_start_address = _1
   }
 
-  [(start_address + ((index % OBJECT_COUNT) * OBJECT_SIZE) + 3)]
+  [(oam_start_address + ((index % OBJECT_COUNT) * OBJECT_SIZE) + 3)]
 }
 

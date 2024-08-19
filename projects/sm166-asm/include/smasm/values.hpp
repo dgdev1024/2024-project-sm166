@@ -145,19 +145,40 @@ namespace smasm
   {
   public:
     inline number_value (
-      const double val
+      const std::uint64_t integer,
+      const double        fractional = 0,
+      std::uint8_t        fraction_bits = default_fraction_bits
     ) :
       value { value_type::number },
-      m_value { val }
-    {}
+      m_fraction_bits { fraction_bits },
+      m_precision { (std::uint32_t) std::pow(2, m_fraction_bits) },
+      m_integer { integer },
+      m_fractional { (std::uint64_t) std::round(fractional * m_precision) },
+      m_number { (double) integer + fractional }
+    {
+      
+    }
 
   public:
-    inline double get_number () const { return m_value; }
-    inline std::uint64_t get_integer () const { return static_cast<std::uint64_t>(m_value); }
-    inline virtual bool is_truthy () const override { return (m_value != 0.0); }
-
+    inline virtual bool is_truthy () const override
+      { return m_integer != 0 || m_fractional != 0; }
+    inline std::uint8_t get_fraction_bits () const
+      { return m_fraction_bits; }
+    inline std::uint64_t get_integer () const
+      { return m_integer; }
+    inline std::uint64_t get_fractional () const
+      { return m_fractional; }
+    inline std::uint32_t get_precision () const
+      { return m_precision; }
+    inline double get_number () const
+      { return m_number; }
+    
   private:
-    double m_value = 0.0;
+    std::uint8_t  m_fraction_bits = 0;
+    std::uint32_t m_precision = 0;
+    std::uint64_t m_integer = 0;
+    std::uint64_t m_fractional = 0;
+    double m_number = 0.0;
 
   };
   

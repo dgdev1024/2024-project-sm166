@@ -24,24 +24,16 @@ namespace smboy
     // m_screen.clear();   m_screen.resize(screen_width * screen_height);
 
     // Initialize Background Palette Memory
-    for (std::size_t i = 0; i < cram_size; i += 16)
+    for (std::size_t i = 0; i < cram_size; i += 8)
     {
-      m_bg_cram[i     ] = 0xFF; m_obj_cram[i     ] = 0xFF;
-      m_bg_cram[i +  1] = 0xFF; m_obj_cram[i +  1] = 0xFF;
-      m_bg_cram[i +  2] = 0xFF; m_obj_cram[i +  2] = 0xFF;
-      m_bg_cram[i +  3] = 0xFF; m_obj_cram[i +  3] = 0xFF;
-      m_bg_cram[i +  4] = 0xAA; m_obj_cram[i +  4] = 0xAA;
-      m_bg_cram[i +  5] = 0xAA; m_obj_cram[i +  5] = 0xAA;
-      m_bg_cram[i +  6] = 0xAA; m_obj_cram[i +  6] = 0xAA;
-      m_bg_cram[i +  7] = 0xAA; m_obj_cram[i +  7] = 0xAA;
-      m_bg_cram[i +  8] = 0x55; m_obj_cram[i +  8] = 0x55;
-      m_bg_cram[i +  9] = 0x55; m_obj_cram[i +  9] = 0x55;
-      m_bg_cram[i + 10] = 0x55; m_obj_cram[i + 10] = 0x55;
-      m_bg_cram[i + 11] = 0x55; m_obj_cram[i + 11] = 0x55;
-      m_bg_cram[i + 12] = 0x00; m_obj_cram[i + 12] = 0x00;
-      m_bg_cram[i + 13] = 0x00; m_obj_cram[i + 13] = 0x00;
-      m_bg_cram[i + 14] = 0x00; m_obj_cram[i + 14] = 0x00;
-      m_bg_cram[i + 15] = 0x00; m_obj_cram[i + 15] = 0x00;
+      m_bg_cram[i    ] = 0b11111111; m_obj_cram[i    ] = 0b11111111;
+      m_bg_cram[i + 1] = 0b11111110; m_obj_cram[i + 1] = 0b11111110;
+      m_bg_cram[i + 2] = 0b10011100; m_obj_cram[i + 2] = 0b10011100;
+      m_bg_cram[i + 3] = 0b11100110; m_obj_cram[i + 3] = 0b11100110;
+      m_bg_cram[i + 4] = 0b01011010; m_obj_cram[i + 4] = 0b01011010;
+      m_bg_cram[i + 5] = 0b11010110; m_obj_cram[i + 5] = 0b11010110;
+      m_bg_cram[i + 6] = 0b00001000; m_obj_cram[i + 6] = 0b00001000;
+      m_bg_cram[i + 7] = 0b01000010; m_obj_cram[i + 7] = 0b01000010;
     }
 
     // Initialize Internal Values
@@ -60,6 +52,7 @@ namespace smboy
     m_bg_pal_spec           = 0x00;
     m_obj_pal_spec          = 0x00;
     m_priority_mode         = 0x00;
+    m_dma_source            = 0xFFFE0000;
 
     // Initialize frame time...
     m_start = std::chrono::system_clock::now();
@@ -532,16 +525,25 @@ namespace smboy
     color_index   = (color_index    % 4);
 
     // Calculate the starting index in color RAM of the color we wish to obtain.
-    std::uint8_t start_index = (palette_index * bytes_per_palette) + (color_index * 4);
+    std::uint8_t start_index = (palette_index * bytes_per_palette) + (color_index * 2);
 
     // Retrieve the color components from color RAM. Tney are laid out in the following order:
-    //  - Red, Green, Blue, Alpha
-    //
-    // Create the color value by bitwise OR'ing the above bytes. Return the result.
-    return        (m_bg_cram[start_index]      << 24) |
-                  (m_bg_cram[start_index + 1]  << 16) |
-                  (m_bg_cram[start_index + 2]  <<  8) |
-                  (m_bg_cram[start_index + 3]       );
+    //  - Red, Green, Blue
+    std::uint32_t red = (
+      (m_bg_cram[start_index] & 0b11111000) >> 3
+    ) * 8;
+    std::uint32_t green = (
+      ((m_bg_cram[start_index] & 0b00000111) << 2) |
+      ((m_bg_cram[start_index + 1] & 0b11000000) >> 6)
+    ) * 8;
+    std::uint32_t blue = (
+      (m_bg_cram[start_index + 1] & 0b00111110) >> 1
+    ) * 8;
+
+    return        (red         ) |
+                  (green  <<  8) |
+                  (blue   << 16) |
+                  0xFF000000;
 
   }
 
@@ -554,12 +556,22 @@ namespace smboy
     palette_index = (palette_index  % 8);
     color_index   = (color_index    % 4);
 
-    std::uint8_t start_index = (palette_index * bytes_per_palette) + (color_index * 4);
+    std::uint8_t start_index = (palette_index * bytes_per_palette) + (color_index * 2);
+    std::uint32_t red = (
+      (m_bg_cram[start_index] & 0b11111000) >> 3
+    ) * 8;
+    std::uint32_t green = (
+      ((m_bg_cram[start_index] & 0b00000111) << 2) |
+      ((m_bg_cram[start_index + 1] & 0b11000000) >> 6)
+    ) * 8;
+    std::uint32_t blue = (
+      (m_bg_cram[start_index + 1] & 0b00111110) >> 1
+    ) * 8;
 
-    return        (m_obj_cram[start_index]      << 24) |
-                  (m_obj_cram[start_index + 1]  << 16) |
-                  (m_obj_cram[start_index + 2]  <<  8) |
-                  (m_obj_cram[start_index + 3]       );
+    return        (red         ) |
+                  (green  <<  8) |
+                  (blue   << 16) |
+                  0xFF000000;
   }  
 
   std::uint32_t renderer::fetch_obj_pixel (std::uint8_t bit, std::uint8_t color_index, 

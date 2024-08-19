@@ -488,13 +488,8 @@ namespace sm
      * 
      * @note  Byte register 0 (`b0`) is the accumulator register. It is responsible for holding the
      *        result of arithmetic instructions and some comparison instructions.
-     */
-    std::uint8_t m_registers[16];
-
-    /**
-     * @brief The flags register is a special-purpose 8-bit register whose bits are used to indicate
+     * @note  Byte register 1 (`b1`) is a special-purpose 8-bit register whose bits are used to indicate
      *        the current state of the SM166 CPU. The notes below list what each bit indicates.
-     * 
      * @note  Bit 7 - Zero Flag (`Z`) - If the previous instruction had a value result, this flag
      *        indicates whether or not that value result was zero.
      * @note  Bit 6 - Negative Flag (`N`) - Indicates whether or not the previous instruction
@@ -515,7 +510,7 @@ namespace sm
      *        be executing instructions. Set by the `HALT` instruction; Clear when an interrupt is
      *        received.
      */
-    std::uint8_t m_flags = 0b00000000;
+    std::uint8_t m_registers[16];
 
     /**
      * @brief The program counter is a 32-bit register whose value points to the opcode of the

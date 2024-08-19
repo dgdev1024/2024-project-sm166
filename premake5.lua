@@ -43,7 +43,7 @@ workspace "project-sm166"
   filter { }
 
 -- SM166 CPU Emulator Backend
-project "sm166"
+project "sm166-backend"
 
   -- Project Configuration
   kind "StaticLib"
@@ -62,7 +62,7 @@ project "sm166"
   }
 
 -- SM Boy Emulator Backend
-project "sm166-boy"
+project "sm166-boy-backend"
 
   -- Project Configuration
   kind "StaticLib"
@@ -82,7 +82,7 @@ project "sm166-boy"
   }
 
 -- SM Boy Emulator Frontend
-project "smboy"
+project "sm166-boy"
 
   -- Project Configuration
   kind "ConsoleApp"
@@ -113,7 +113,7 @@ project "smboy"
   }
 
   links {
-    "sm166-boy", "sm166", "pthread"
+    "sm166-boy-backend", "sm166-backend", "pthread"
   }
 
   filter { "configurations:debug" }
@@ -124,7 +124,7 @@ project "smboy"
 
 
 -- SM166 Assembler
-project "smasm"
+project "sm166-asm"
 
   -- Project Configuration
   kind "ConsoleApp"
@@ -149,5 +149,5 @@ project "smasm"
   }
 
   links {
-    "sm166"
+    "sm166-backend"
   }

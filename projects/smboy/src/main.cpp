@@ -100,9 +100,22 @@ int main (int argc, char** argv)
   AudioStream stream;
     
   // Get handles to the emulator's renderer and joypad context.
+  auto& program = emulator.get_program();
   auto& renderer = emulator.get_renderer();
   auto& joypad = emulator.get_joypad();
   auto& audio = emulator.get_audio();
+
+  // Keep a count of how many times we hit vblank.
+  std::uint32_t vblank_count = 0;
+  renderer.set_vblank_function([&] (smboy::emulator&)
+  {
+    vblank_count++;
+    if (vblank_count % 500 == 0)
+    {
+      program.save_sram_file();
+    }
+  });
+  
 
   audio.set_mix_clock(44100.0f);
   audio.set_mix_function([&] (const smboy::audio_sample& sample)
@@ -124,15 +137,6 @@ int main (int argc, char** argv)
     sf::Texture target;
     target.create(smboy::screen_width, smboy::screen_height);
     target.setSmooth(true);
-
-    // Create a font and text to use for printing the TPS.
-    sf::Font font;
-    font.loadFromFile("assets/source_code_regular.ttf");
-
-    sf::Text tpsText;
-    tpsText.setFont(font);
-    tpsText.setCharacterSize(20);
-    tpsText.setFillColor(sf::Color::Red);
 
     // Start the audio stream.
     stream.play();
@@ -197,11 +201,9 @@ int main (int argc, char** argv)
       target.update(renderer.get_screen_bytes());
       sf::Sprite sprite { target };
       sprite.setScale(4, 4);
-      tpsText.setString("FPS: " + std::to_string(emulator.get_renderer().get_fps()));
 
       window.clear();
       window.draw(sprite);
-      window.draw(tpsText);
       window.display();
     }
     

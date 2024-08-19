@@ -37,3 +37,6 @@ build/
 generated/
 notes/
 .vscode
+
+# Personal Scripts
+scripts/install.sh

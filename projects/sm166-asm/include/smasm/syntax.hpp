@@ -31,6 +31,7 @@ namespace smasm
 
     address_literal,
     function_expression,
+    unary_expression,
     binary_expression,
     call_expression,
 
@@ -768,6 +769,43 @@ namespace smasm
 
   };
 
+  class unary_expression : public expression
+  {
+  public:
+    inline unary_expression (
+      const expression::ptr& expr,
+      const std::string& oper
+    ) :
+      expression { syntax_type::unary_expression },
+      m_expr { expr },
+      m_oper { oper }
+    {}
+
+  public:
+    inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+    {
+      os << indent(i) << "unary expression {\n";
+      {
+        os << indent(i + 2) << "operator: \"" << m_oper << "\"\n";
+
+        if (m_expr != nullptr) {
+          os << indent(i + 2) << "expression:\n";
+          m_expr->dump(os, i + 4);
+        }
+      }
+      os << indent(i) << "}\n";
+    }
+
+  public:
+    inline const expression::ptr& get_expr () const { return m_expr; }
+    inline const std::string& get_oper () const { return m_oper; }
+  
+  private:
+    expression::ptr m_expr = nullptr;
+    std::string m_oper = "";
+
+  };
+
   class binary_expression : public expression
   {
   public:
@@ -883,32 +921,73 @@ namespace smasm
     std::string m_symbol = "";
 
   };
-  
+
   class numeric_literal : public expression
   {
   public:
     inline numeric_literal (
-      const double value
+      const std::uint64_t integer,
+      const double        fractional = 0,
+      const std::uint8_t  fraction_bits = 0
     ) :
       expression { syntax_type::numeric_literal },
-      m_value { value }
-    {}
+      m_integer { integer },
+      m_fractional { fractional },
+      m_fraction_bits { fraction_bits }
+    {
+
+    }
   
   public:
     inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
     {
-      os << indent(i) << "numeric literal: " << m_value << "\n";
+      os << indent(i) << "numeric literal {\n";
+      os << indent(i + 2) << "integer: " << m_integer << std::endl;
+      os << indent(i + 2) << "fractional: " << m_fractional << std::endl;
+      os << indent(i + 2) << "fraction bits: " << (int) m_fraction_bits << std::endl;
+      os << indent(i) << "}\n";
     }
-  
+
   public:
-    inline double get_number () const { return m_value; }
-    inline std::uint64_t get_integer () const { return static_cast<std::uint64_t>(m_value); }
-    inline std::int64_t get_signed_integer () const { return static_cast<std::int64_t>(m_value); }
-  
+    inline std::uint64_t get_integer () const 
+      { return m_integer; }
+    inline double get_fractional () const
+      { return m_fractional; }
+    inline std::uint8_t get_fraction_bits () const
+      { return m_fraction_bits; }
+
   private:
-    double m_value = 0.0;
-      
+    std::uint64_t m_integer = 0;
+    double        m_fractional = 0;
+    std::uint8_t  m_fraction_bits = 0;
+
   };
+  
+  // class numeric_literal : public expression
+  // {
+  // public:
+  //   inline numeric_literal (
+  //     const double value
+  //   ) :
+  //     expression { syntax_type::numeric_literal },
+  //     m_value { value }
+  //   {}
+  
+  // public:
+  //   inline virtual void dump (std::ostream& os, std::size_t i = 0) const override
+  //   {
+  //     os << indent(i) << "numeric literal: " << m_value << "\n";
+  //   }
+  
+  // public:
+  //   inline double get_number () const { return m_value; }
+  //   inline std::uint64_t get_integer () const { return static_cast<std::uint64_t>(m_value); }
+  //   inline std::int64_t get_signed_integer () const { return static_cast<std::int64_t>(m_value); }
+  
+  // private:
+  //   double m_value = 0.0;
+      
+  // };
   
   class string_literal : public expression
   {

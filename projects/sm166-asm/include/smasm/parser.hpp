@@ -43,7 +43,7 @@ namespace smasm
     expression::ptr parse_call_expression (lexer& _lexer);
   
   private:
-    expression::ptr parse_primary_expression (lexer& _lexer, char unary = '\0');
+    expression::ptr parse_primary_expression (lexer& _lexer);
 
   };
 

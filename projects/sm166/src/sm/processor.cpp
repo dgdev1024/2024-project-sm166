@@ -11,7 +11,7 @@ namespace sm
       m_registers[i] = 0x00;
     }
 
-    m_flags = 0b00000000;
+    m_registers[1] = 0b00000000;
     m_program_counter = 0x200;
     m_stack_pointer = 0xFFFF;
     m_tick_cycles = 0;
@@ -1307,14 +1307,14 @@ namespace sm
   {
     switch (type)
     {
-      case processor_flag_type::zero:               return sm_getbit(m_flags, 7);
-      case processor_flag_type::negative:           return sm_getbit(m_flags, 6);
-      case processor_flag_type::half_carry:         return sm_getbit(m_flags, 5);
-      case processor_flag_type::carry:              return sm_getbit(m_flags, 4);
-      case processor_flag_type::interrupt_disable:  return sm_getbit(m_flags, 3);
-      case processor_flag_type::interrupt_enable:   return sm_getbit(m_flags, 2);
-      case processor_flag_type::halt:               return sm_getbit(m_flags, 1);
-      case processor_flag_type::stop:               return sm_getbit(m_flags, 0);
+      case processor_flag_type::zero:               return sm_getbit(m_registers[1], 7);
+      case processor_flag_type::negative:           return sm_getbit(m_registers[1], 6);
+      case processor_flag_type::half_carry:         return sm_getbit(m_registers[1], 5);
+      case processor_flag_type::carry:              return sm_getbit(m_registers[1], 4);
+      case processor_flag_type::interrupt_disable:  return sm_getbit(m_registers[1], 3);
+      case processor_flag_type::interrupt_enable:   return sm_getbit(m_registers[1], 2);
+      case processor_flag_type::halt:               return sm_getbit(m_registers[1], 1);
+      case processor_flag_type::stop:               return sm_getbit(m_registers[1], 0);
       default:                                      return false;
     }
   }
@@ -1403,14 +1403,14 @@ namespace sm
   {
     switch (type)
     {
-      case processor_flag_type::zero:               sm_setbit(m_flags, 7, on); break;
-      case processor_flag_type::negative:           sm_setbit(m_flags, 6, on); break;
-      case processor_flag_type::half_carry:         sm_setbit(m_flags, 5, on); break;
-      case processor_flag_type::carry:              sm_setbit(m_flags, 4, on); break;
-      case processor_flag_type::interrupt_disable:  sm_setbit(m_flags, 3, on); break;
-      case processor_flag_type::interrupt_enable:   sm_setbit(m_flags, 2, on); break;
-      case processor_flag_type::halt:               sm_setbit(m_flags, 1, on); break;
-      case processor_flag_type::stop:               sm_setbit(m_flags, 0, on); break;
+      case processor_flag_type::zero:               sm_setbit(m_registers[1], 7, on); break;
+      case processor_flag_type::negative:           sm_setbit(m_registers[1], 6, on); break;
+      case processor_flag_type::half_carry:         sm_setbit(m_registers[1], 5, on); break;
+      case processor_flag_type::carry:              sm_setbit(m_registers[1], 4, on); break;
+      case processor_flag_type::interrupt_disable:  sm_setbit(m_registers[1], 3, on); break;
+      case processor_flag_type::interrupt_enable:   sm_setbit(m_registers[1], 2, on); break;
+      case processor_flag_type::halt:               sm_setbit(m_registers[1], 1, on); break;
+      case processor_flag_type::stop:               sm_setbit(m_registers[1], 0, on); break;
     }
   }
 
@@ -1591,7 +1591,7 @@ namespace sm
 
   void processor::execute_lhr (memory& mem)
   {
-    std::uint8_t  address_low_byte  = read_register(processor_register_type::b1);
+    std::uint8_t  address_low_byte  = read_register(processor_register_type::b2);
     std::uint8_t  value             = mem.read_byte(0xFFFFFF00 + address_low_byte); cycle(1);
     write_register(processor_register_type::b0, value);
   }
@@ -1629,7 +1629,7 @@ namespace sm
 
   void processor::execute_shr (memory& mem)
   {
-    std::uint8_t  address_low_byte  = read_register(processor_register_type::b1);
+    std::uint8_t  address_low_byte  = read_register(processor_register_type::b2);
     std::uint8_t  value             = read_register(processor_register_type::b0);
     mem.write_byte(0xFFFFFF00 + address_low_byte, value); cycle(1);
   }

@@ -19,6 +19,7 @@ namespace smasm
     const token& token_at (const std::size_t offset = 0) const;
     token discard_token ();
     void clear_tokens ();
+    void clear_includes ();
 
   public:
     

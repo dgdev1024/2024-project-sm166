@@ -40,6 +40,7 @@ namespace smasm
     double_pipe,
     ampersand,
     double_ampersand,
+    tilde,
     asterisk,
     equals,
     double_equals,
@@ -74,8 +75,7 @@ namespace smasm
     bool            is_integer () const;
 
     const char*     get_string_type () const;
-    std::uint64_t   get_integer () const;
-    double          get_number () const;
+    std::uint32_t   get_integer () const;
     const keyword&  get_keyword () const;
 
   };

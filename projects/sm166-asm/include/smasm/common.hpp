@@ -16,10 +16,12 @@
 namespace fs = std::filesystem;
 
 #define indent(c) std::string(c, ' ')
+#define pad(c, l) std::string(c, l);
 
 namespace smasm
 {
 
   using string_list = std::vector<std::string>;
+  constexpr std::uint8_t default_fraction_bits = 16;
 
 }

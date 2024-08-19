@@ -491,7 +491,8 @@ namespace smasm
 
   expression::ptr parser::parse_expression (lexer& _lexer)
   {
-    const auto& token_kw = _lexer.token_at().get_keyword();
+    auto token = _lexer.token_at();
+    const auto& token_kw = token.get_keyword();
     if (token_kw.type == keyword_type::language)
     {
       auto lang_token = _lexer.discard_token();
@@ -506,6 +507,21 @@ namespace smasm
                     <<  std::endl;
           return nullptr;
       }
+    }
+    else if (
+      token.type == token_type::plus ||
+      token.type == token_type::minus ||
+      token.type == token_type::tilde
+    )
+    {
+      _lexer.discard_token();
+      expression::ptr expr = parse_expression(_lexer);
+      if (expr == nullptr)
+      {
+        return nullptr;
+      }
+
+      return expression::make<unary_expression>(expr, token.contents);
     }
 
     return parse_conditional_expression(_lexer);
@@ -739,33 +755,45 @@ namespace smasm
 
   /** Primary Expression Parsing Methods **********************************************************/
 
-  expression::ptr parser::parse_primary_expression (lexer& _lexer, char unary)
+  expression::ptr parser::parse_primary_expression (lexer& _lexer)
   {
     auto token = _lexer.discard_token();
     
     switch (token.type)
     {
       case token_type::minus:
-        return parse_primary_expression(_lexer, '-');
       case token_type::identifier:
         return expression::make<identifier>(token.contents);
-      case token_type::number:
-        switch (unary)
+      case token_type::number: {
+        std::string& str = token.contents;
+        std::uint8_t fraction_bits = 0;
+        std::size_t char_index = str.rfind('q');
+        if (char_index != std::string::npos)
         {
-          case '-': return expression::make<numeric_literal>(-token.get_number());
-          case '+':
-          default: return expression::make<numeric_literal>(token.get_number());
+          fraction_bits = std::stoul(str.substr(char_index + 1));
+          str.erase(char_index);
         }
+        
+        double number = std::stod(str);
+        double integer = 0.0;
+        double fractional = std::modf(number, &integer);
+
+        if (str.rfind('.') != std::string::npos && fraction_bits == 0)
+        {
+          fraction_bits = default_fraction_bits;
+        }
+
+        return expression::make<numeric_literal>(
+          static_cast<std::uint64_t>(integer),
+          fractional,
+          fraction_bits
+        );
+      } break;
       case token_type::hexadecimal:
       case token_type::integer:
       case token_type::octal:
       case token_type::binary: {
-        switch (unary)
-        {
-          case '-': return expression::make<numeric_literal>(-token.get_number());
-          case '+': return expression::make<numeric_literal>(-token.get_number());
-          default: return expression::make<numeric_literal>(token.get_integer());
-        }
+        return expression::make<numeric_literal>(token.get_integer());
       } break;
       case token_type::string:
         return expression::make<string_literal>(token.contents);
@@ -834,6 +862,10 @@ namespace smasm
         }
 
         return expression::make<numeric_literal>((high_byte << 8) | low_byte);
+      } break;
+      case token_type::end_of_file: {
+        std::cerr << "[parser] Unexpected end of file reached." << std::endl;
+        return nullptr;
       } break;
       default:
         std::cerr <<  "[parser] Unexpected '" << token.get_string_type() << "' token = '"

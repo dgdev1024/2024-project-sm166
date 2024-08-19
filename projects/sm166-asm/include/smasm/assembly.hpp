@@ -14,14 +14,15 @@ namespace smasm
 
   public:
     bool  resize_rom (const std::size_t size);
-    bool  write_byte (std::uint8_t value);
-    bool  write_word (std::uint16_t value);
-    bool  write_long (std::uint32_t value);
-    bool  include_binary (const fs::path& path);
+    bool  write_byte (std::uint8_t value, bool first_pass = false);
+    bool  write_word (std::uint16_t value, bool first_pass = false);
+    bool  write_long (std::uint32_t value, bool first_pass = false);
+    bool  include_binary (const fs::path& path, bool first_pass = false);
     bool  save_rom (const fs::path& path);
     bool  set_rom_cursor (const std::size_t cursor);
     void  set_ram_cursor (std::size_t cursor);
     void  set_ram_mode (bool on);
+    void  clear_incbins ();
 
   public:
     inline bool is_in_ram () const { return m_in_ram; }
